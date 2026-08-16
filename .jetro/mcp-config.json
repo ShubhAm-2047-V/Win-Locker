@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "jetro": {
+      "command": "C:\\Users\\SHUBHAM\\.jetro\\runtime\\node-win32-x64.exe",
+      "args": [
+        "C:\\Users\\SHUBHAM\\.jetro\\mcp-server\\index.js"
+      ],
+      "env": {
+        "JET_WORKSPACE": "d:\\Win_locker",
+        "JET_API_URL": "https://api.jetro.ai",
+        "PATH": "C:\\Users\\SHUBHAM\\.jetro\\runtime;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python314\\Scripts\\;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python314\\;C:\\Program Files\\Common Files\\Oracle\\Java\\javapath;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8\\libnvvp;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR;C:\\MinGW\\bin;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Tesseract-OCR;E:\\flutter\\bin;C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.17.10-hotspot\\bin;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\MongoDB\\Server\\7.0\\bin;C:\\Program Files\\Go\\bin;D:\\Git\\cmd;D:\\New Folder\\;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python311\\;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Python\\Python310\\;C:\\Users\\SHUBHAM\\.local\\bin;C:\\Users\\SHUBHAM\\.local\\bin;C:\\\\Users\\\\SHUBHAM\\\\AppData\\\\Local\\\\Blackbox\\\\bin;D:\\conda;D:\\conda\\Library\\mingw-w64\\bin;D:\\conda\\Library\\usr\\bin;D:\\conda\\Library\\bin;D:\\conda\\Scripts;C:\\Users\\SHUBHAM\\AppData\\Local\\Microsoft\\WindowsApps;D:\\Microsoft VS Code\\bin;C:\\MinGW\\bin;C:\\Users\\SHUBHAM\\AppData\\Local\\Programs\\Ollama;C:\\Users\\SHUBHAM\\AppData\\Local\\Python\\bin;C:\\Users\\SHUBHAM\\AppData\\Local\\Microsoft\\WinGet\\Links;C:\\Program Files\\Google\\Chrome\\Application;D:\\java\\bin;E:\\flutter\\bin;C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.17.10-hotspot\\bin;C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.17.10-hotspot\\bin;D:\\antigravityapp\\Antigravity\\bin;C:\\Users\\SHUBHAM\\.bun\\bin;C:\\Users\\SHUBHAM\\.lmstudio\\bin;C:\\Users\\SHUBHAM\\go\\bin;C:\\Users\\SHUBHAM\\AppData\\Roaming\\npm;C:\\Users\\SHUBHAM\\AppData\\AndroidCLI;C:\\Users\\SHUBHAM\\flutter\\bin;D:\\Antigravity IDE\\bin"
+      }
+    }
+  }
+}

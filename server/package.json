@@ -1,0 +1,27 @@
+{
+  "name": "vercel-storage-server",
+  "version": "1.0.0",
+  "description": "Free cloud storage server and management dashboard ready for Vercel deployment with Vercel Blob support",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "node api/index.js"
+  },
+  "keywords": [
+    "vercel",
+    "storage",
+    "blob",
+    "serverless",
+    "cloud-vault",
+    "dashboard"
+  ],
+  "author": "WinLocker",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/blob": "^0.27.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

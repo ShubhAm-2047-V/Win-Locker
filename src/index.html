@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic Cal - Stealth Vault</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Hidden Webcam Video & Canvas for Intruder Photo Capture -->
+  <video id="webcamVideo" autoplay style="display:none;"></video>
+  <canvas id="webcamCanvas" style="display:none;"></canvas>
+
+  <!-- ============================================================ -->
+  <!-- CAMOUFLAGE MODE: FAKE CALCULATOR                             -->
+  <!-- ============================================================ -->
+  <div id="calcCamouflageView" class="auth-container" style="display: none;">
+    <div class="calc-container">
+      <div id="calcScreen" class="calc-screen">0</div>
+      <div class="calc-grid">
+        <button class="calc-btn operator" onclick="calcAction('C')">C</button>
+        <button class="calc-btn operator" onclick="calcAction('/')">/</button>
+        <button class="calc-btn operator" onclick="calcAction('*')">*</button>
+        <button class="calc-btn operator" onclick="calcAction('-')">-</button>
+        <button class="calc-btn" onclick="calcAction('7')">7</button>
+        <button class="calc-btn" onclick="calcAction('8')">8</button>
+        <button class="calc-btn" onclick="calcAction('9')">9</button>
+        <button class="calc-btn operator" onclick="calcAction('+')">+</button>
+        <button class="calc-btn" onclick="calcAction('4')">4</button>
+        <button class="calc-btn" onclick="calcAction('5')">5</button>
+        <button class="calc-btn" onclick="calcAction('6')">6</button>
+        <button class="calc-btn operator" id="calcSecretUnlock" onclick="calcAction('=')">=</button>
+        <button class="calc-btn" onclick="calcAction('1')">1</button>
+        <button class="calc-btn" onclick="calcAction('2')">2</button>
+        <button class="calc-btn" onclick="calcAction('3')">3</button>
+        <button class="calc-btn" onclick="calcAction('0')">0</button>
+      </div>
+      <div style="margin-top:14px; text-align:center;">
+        <span id="btnExitCalculator" style="font-size:11px; color:var(--text-dim); cursor:pointer;">Click to Switch Mode</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- AUTHENTICATION CONTAINER (LOCK / SETUP SCREEN)               -->
+  <!-- ============================================================ -->
+  <div id="authScreen" class="auth-container">
+    
+    <!-- Initial Setup Card -->
+    <div id="setupCard" class="auth-box" style="display: none;">
+      <div class="auth-logo">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </div>
+      <h2 class="auth-title">Welcome to Magic Cal</h2>
+      <p class="auth-subtitle">Set up a Master Password to protect and hide your files completely from Windows File Explorer.</p>
+
+      <div class="form-group">
+        <label class="form-label">Master Password</label>
+        <input type="password" id="setupPasswordInput" class="input-field" placeholder="Enter strong password">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirm Master Password</label>
+        <input type="password" id="setupConfirmPasswordInput" class="input-field" placeholder="Confirm password">
+      </div>
+
+      <button id="btnCreateMasterPassword" class="btn-primary">Create Secure Vault</button>
+    </div>
+
+    <!-- Recovery Key Display Card -->
+    <div id="recoveryKeyCard" class="auth-box" style="display: none;">
+      <div class="auth-logo" style="background: linear-gradient(135deg, var(--emerald), var(--cyan));">
+        <svg viewBox="0 0 24 24"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+      </div>
+      <h2 class="auth-title">Save Your Recovery Key!</h2>
+      <p class="auth-subtitle">If you forget your password, this key is the ONLY way to recover your hidden files. Store it somewhere safe.</p>
+
+      <div id="recoveryKeyDisplay" class="recovery-key-box">WINK-XXXX-XXXX-XXXX</div>
+
+      <button id="btnCopyRecoveryKey" class="btn-primary" style="margin-bottom: 12px;">Copy Recovery Key</button>
+      <button id="btnProceedToVault" class="btn-secondary" style="width: 100%;">I Have Saved It, Open Vault</button>
+    </div>
+
+    <!-- Login Lock Card -->
+    <div id="loginCard" class="auth-box" style="display: none;">
+      <div class="auth-logo">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </div>
+      <h2 class="auth-title">Vault Locked</h2>
+      <p class="auth-subtitle">Enter your Master Password (or Panic Password) to unlock your vault.</p>
+
+      <div class="form-group">
+        <div class="input-wrapper">
+          <svg class="input-icon-left" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          <input type="password" id="loginPasswordInput" class="input-field" placeholder="Master Password or Panic Password" autofocus>
+          <svg class="input-icon-right" id="togglePasswordVisibility" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        </div>
+      </div>
+
+      <button id="btnUnlockVault" class="btn-primary" style="margin-bottom:14px;">Unlock Vault</button>
+
+      <div id="linkForgotPass" class="auth-footer-link">Forgot Master Password? Use Recovery Key</div>
+    </div>
+
+    <!-- Forgot Password / Recovery Key Card -->
+    <div id="resetCard" class="auth-box" style="display: none;">
+      <h2 class="auth-title">Reset Vault Password</h2>
+      <p class="auth-subtitle">Enter your 24-character Recovery Key and a new Master Password.</p>
+
+      <div class="form-group">
+        <label class="form-label">Recovery Key</label>
+        <input type="text" id="resetRecoveryKeyInput" class="input-field" placeholder="WINK-XXXX-XXXX-XXXX">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" id="resetNewPasswordInput" class="input-field" placeholder="New Password">
+      </div>
+
+      <button id="btnSubmitReset" class="btn-primary" style="margin-bottom: 12px;">Reset & Unlock</button>
+      <button id="btnBackToLogin" class="btn-secondary" style="width: 100%;">Back to Login</button>
+    </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MAIN APPLICATION VAULT INTERFACE                             -->
+  <!-- ============================================================ -->
+  <div id="appScreen" class="app-container" style="display: none;">
+
+    <aside class="sidebar">
+      <div class="app-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        </div>
+        <div class="brand-title">Magic Cal</div>
+      </div>
+
+      <div class="nav-section-title">Categories</div>
+      <ul class="nav-list">
+        <li class="nav-item active" data-category="all">
+          <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/></svg>
+          All Items
+        </li>
+        <li class="nav-item" data-category="documents">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+          Documents
+        </li>
+        <li class="nav-item" data-category="photos">
+          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          Photos & Images
+        </li>
+        <li class="nav-item" data-category="videos">
+          <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+          Videos
+        </li>
+        <li class="nav-item" data-category="audio">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          Audio & Music
+        </li>
+        <li class="nav-item" data-category="trash" style="color:var(--rose);">
+          <svg viewBox="0 0 24 24" style="stroke:var(--rose);"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          Recycle Bin
+        </li>
+      </ul>
+
+      <div class="nav-section-title">System</div>
+      <ul class="nav-list">
+        <li id="navSettings" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          Vault Settings
+        </li>
+      </ul>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="storage-widget">
+        <div class="storage-title">
+          <span>Vault Usage</span>
+          <span id="storageSizeText">0 MB</span>
+        </div>
+        <div class="storage-bar-bg">
+          <div id="storageBarFill" class="storage-bar-fill"></div>
+        </div>
+      </div>
+
+      <button id="btnLockApp" class="btn-lock">
+        <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        Lock Vault
+      </button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div id="breadcrumbTrail" class="breadcrumbs"></div>
+
+        <div class="header-actions">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search files & #tags...">
+          </div>
+
+          <button id="btnEmptyTrashHeader" class="btn-secondary" style="display: none; background: rgba(244, 63, 94, 0.15); color: var(--rose);">
+            Empty Recycle Bin
+          </button>
+
+          <button id="btnCreateNewFolder" class="btn-secondary" style="display: flex; align-items: center; gap: 6px;">
+            <svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3v-3h2v3h3v2z"/></svg>
+            New Folder
+          </button>
+
+          <button id="btnAddFiles" class="btn-add">
+            <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Import Files
+          </button>
+        </div>
+      </header>
+
+      <div id="vaultBody" class="vault-body">
+        <div id="dropzoneOverlay" class="dropzone-overlay">
+          <svg style="width: 64px; height: 64px; fill: var(--primary);" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+          <div class="dropzone-title">Drop Files or Folders Here to Hide & Encrypt</div>
+        </div>
+
+        <div id="itemsGrid" class="items-grid"></div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24"><path fill="none" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <h3 style="font-size: 18px; margin-bottom: 6px; color: #0f172a;">This Folder is Empty</h3>
+          <p style="font-size: 14px; color: var(--text-dim);">Drag and drop files or click "Import Files" above to secure them inside Magic Cal.</p>
+        </div>
+
+        <div class="unlocked-status-badge">
+          <span class="status-dot"></span> Vault unlocked
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="mediaModal" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div id="mediaModalTitle" class="modal-title">Media Viewer</div>
+        <button id="btnCloseMediaModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div id="mediaModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="folderModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 400px;">
+      <div class="modal-header">
+        <div class="modal-title">Create Virtual Folder</div>
+        <button id="btnCloseFolderModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="flex-direction: column; align-items: stretch;">
+        <div class="form-group">
+          <label class="form-label">Folder Name</label>
+          <input type="text" id="folderNameInput" class="input-field" placeholder="e.g. Financial Docs">
+        </div>
+        <button id="btnSubmitCreateFolder" class="btn-primary">Create Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal (Advanced v2.0 Features) -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 650px; max-height: 88vh;">
+      <div class="modal-header">
+        <div class="modal-title">Vault Settings & Security Options</div>
+        <button id="btnCloseSettingsModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="flex-direction: column; align-items: stretch; gap: 20px; padding: 24px 28px 36px 28px;">
+        
+        <!-- Decoy Vault Setup -->
+        <div>
+          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">Panic Password (Decoy Vault Mode)</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Create a secondary password. If entered on the lock screen, it opens a fake decoy vault instead of your real vault.</p>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="password" id="decoyPassInput" class="input-field" style="padding: 12px 18px; flex: 1;" placeholder="New Decoy/Panic Password">
+            <button id="btnSetupDecoy" class="btn-primary" style="width: auto; white-space: nowrap; padding: 12px 24px;">Set Panic Password</button>
+          </div>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- Single-File Archive Backup -->
+        <div>
+          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">Single-File Encrypted Backup (.winlocker)</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Export your whole vault into one password-protected `.winlocker` archive file.</p>
+          <div style="display: flex; gap: 12px;">
+            <button id="btnExportBackupArchive" class="btn-primary" style="flex:1;">Export .winlocker Backup</button>
+            <button id="btnImportBackupArchive" class="btn-secondary" style="flex:1;">Restore .winlocker Backup</button>
+          </div>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- Selective Backup Sync -->
+        <div>
+          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">Selective Cloud / Local Sync</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Selectively sync marked vault files to an external folder (e.g. Google Drive, OneDrive, or USB).</p>
+          <button id="btnSyncSelectiveNow" class="btn-secondary" style="width:100%;">Sync Selective Files Now</button>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- Camouflage Mode -->
+        <div>
+          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">Camouflage Mode (Fake Calculator)</h4>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+            <input type="checkbox" id="toggleCamouflageMode" style="width: 18px; height: 18px; accent-color: var(--primary);">
+            <span>Mask Magic Cal as a Calculator when locked (Press Ctrl+Space to toggle)</span>
+          </label>
+        </div>
+
+        <hr class="settings-divider">
+
+        <!-- Intruder Snapshots -->
+        <div style="padding-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="color: #e11d48; font-weight: 800; font-size: 15px; margin: 0;">Intruder Photo Logs</h4>
+            <button id="btnClearIntruderLogs" class="btn-secondary" style="font-size: 12px; font-weight: 800; padding: 6px 16px; border-color: rgba(244, 63, 94, 0.4); color: #e11d48; background: rgba(244, 63, 94, 0.10); border-radius: 16px;">Clear All Logs</button>
+          </div>
+          <div id="intruderLogsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-height: 220px; overflow-y: auto;">
+            <div style="font-size:13.5px; font-weight: 600; color:var(--text-dim); padding: 4px 0;">No intruder attempts logged.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Lock Trigger Modal (.lock Extension Detected) -->
+  <div id="lockTriggerModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color:var(--cyan);">Locking: <span id="lockTriggerFileName">file.lock</span></div>
+        <button id="btnCloseLockTriggerModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="flex-direction: column; align-items: stretch; gap: 16px;">
+        <p style="font-size:13px; color:var(--text-muted);">A <code>.lock</code> extension was detected in Windows File Explorer. Verify your Master Password and set a custom Item Password to lock it.</p>
+        
+        <div class="form-group">
+          <label class="form-label">Step 1: WinLocker Master Password</label>
+          <input type="password" id="lockMasterPassInput" class="input-field" placeholder="Enter WinLocker Master Password" autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Step 2: Set Item Lock Password (Optional)</label>
+          <input type="password" id="lockItemPassInput" class="input-field" placeholder="Set custom password (or leave blank)">
+        </div>
+
+        <button id="btnConfirmLockTrigger" class="btn-primary">Encrypt & Lock File Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden elements for webcam intruder photo capture -->
+  <video id="webcamVideo" autoplay muted playsinline style="display: none;"></video>
+  <canvas id="webcamCanvas" style="display: none;"></canvas>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Custom 3D Crystal Glass Context Menu -->
+  <div id="glassContextMenu" class="glass-context-menu" style="display: none;"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

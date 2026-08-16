@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinLocker - Lock File</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 20px;
+    }
+    .prompt-box {
+      width: 100%;
+      background: transparent;
+      text-align: left;
+    }
+    .prompt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .prompt-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--cyan);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
+    }
+    .btn-close-prompt {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .btn-close-prompt:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <div class="prompt-box">
+    <div class="prompt-header">
+      <div id="promptFileName" class="prompt-title">Locking: wallpaper.lock</div>
+      <button id="btnCancelPrompt" class="btn-close-prompt">&times;</button>
+    </div>
+
+    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Enter your Master Password to lock and hide this item into WinLocker.</p>
+
+    <div class="form-group">
+      <label class="form-label">Master Password</label>
+      <input type="password" id="promptMasterPass" class="input-field" placeholder="WinLocker Master Password" autofocus>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Item Lock Password (Optional)</label>
+      <input type="password" id="promptItemPass" class="input-field" placeholder="Custom password for this item (or leave blank)">
+    </div>
+
+    <button id="btnConfirmPrompt" class="btn-primary" style="margin-top: 8px;">Encrypt & Lock File Now</button>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    let targetPath = null;
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      let accentColor = type === 'error' ? 'var(--rose)' : 'var(--emerald)';
+      toast.style.borderColor = accentColor;
+      toast.innerHTML = `<span style="color:${accentColor}; font-weight:bold;">●</span> ${message}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    ipcRenderer.on('prompt:init', (event, data) => {
+      targetPath = data.targetPath;
+      document.getElementById('promptFileName').textContent = `Locking: ${data.fileName}`;
+    });
+
+    document.getElementById('btnConfirmPrompt').addEventListener('click', async () => {
+      const masterPass = document.getElementById('promptMasterPass').value;
+      const itemPass = document.getElementById('promptItemPass').value;
+
+      if (!masterPass) {
+        showToast('Please enter Master Password', 'error');
+        return;
+      }
+
+      try {
+        await ipcRenderer.invoke('vault:lockCustomItem', {
+          targetPath: targetPath,
+          masterPassword: masterPass,
+          itemPassword: itemPass
+        });
+
+        showToast('File encrypted & hidden!', 'success');
+        setTimeout(() => {
+          ipcRenderer.send('prompt:close');
+        }, 500);
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('btnCancelPrompt').addEventListener('click', () => {
+      ipcRenderer.send('prompt:close', { targetPath: targetPath, ignore: true });
+    });
+
+    document.getElementById('promptMasterPass').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btnConfirmPrompt').click();
+    });
+  </script>
+</body>
+</html>

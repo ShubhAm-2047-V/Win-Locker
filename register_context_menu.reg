@@ -1,0 +1,24 @@
+Windows Registry Editor Version 5.00
+
+; Register .lock Extension Association
+[HKEY_CLASSES_ROOT\.lock]
+@="WinLocker.LockFile"
+
+[HKEY_CLASSES_ROOT\WinLocker.LockFile]
+@="WinLocker Encrypted File"
+
+[HKEY_CLASSES_ROOT\WinLocker.LockFile\shell\open\command]
+@="\"wscript.exe\" \"d:\\Win_locker\\WinLocker.vbs\" \"%1\""
+
+; Register Right-Click Context Menu ("Lock with WinLocker")
+[HKEY_CLASSES_ROOT\*\shell\WinLocker]
+@="Lock with WinLocker"
+
+[HKEY_CLASSES_ROOT\*\shell\WinLocker\command]
+@="\"wscript.exe\" \"d:\\Win_locker\\WinLocker.vbs\" \"%1\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\WinLocker]
+@="Lock with WinLocker"
+
+[HKEY_CLASSES_ROOT\Directory\shell\WinLocker\command]
+@="\"wscript.exe\" \"d:\\Win_locker\\WinLocker.vbs\" \"%1\""
