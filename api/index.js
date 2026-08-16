@@ -157,19 +157,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/debug-blob', async (req, res) => {
+app.get('/api/test-put', async (req, res) => {
   if (!vercelBlob) {
     return res.json({ success: false, error: '@vercel/blob module not loaded' });
   }
   try {
-    const listOptions = {};
+    const putOptions = {
+      access: 'public'
+    };
     if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
-      listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+      putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
     }
-    const listRes = await vercelBlob.list(listOptions);
-    return res.json({ success: true, blobCount: (listRes.blobs || []).length, blobs: listRes.blobs });
+    const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', putOptions);
+    return res.json({ success: true, blob });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    return res.status(500).json({ success: false, error: err.message, stack: err.stack, name: err.name });
   }
 });
 
