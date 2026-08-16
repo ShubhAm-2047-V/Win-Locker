@@ -39,14 +39,6 @@
         <span class="pulse-dot"></span>
         <span id="storageModeText">Checking Mode...</span>
       </div>
-      <a href="#deployGuide" class="btn btn-secondary btn-sm" id="openDeployGuideBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        Vercel Setup
-      </a>
       <button class="btn btn-primary btn-sm" id="refreshBtn" title="Refresh storage">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
@@ -191,59 +183,6 @@
       </div>
     </section>
 
-    <!-- Vercel Free Deployment Modal / Instructions Card -->
-    <section class="card deploy-guide-card" id="deployGuide">
-      <div class="guide-header">
-        <div class="guide-title-box">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="12 2 2 22 22 22"></polygon>
-          </svg>
-          <h2>How to Deploy on Vercel for Free</h2>
-        </div>
-        <span class="badge badge-success">100% Free Tier</span>
-      </div>
-
-      <div class="guide-steps">
-        <div class="step-card">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h4>Push to GitHub or Use Vercel CLI</h4>
-            <p>Push this folder to your GitHub repo, or run <code>npx vercel</code> inside the <code>server</code> folder.</p>
-          </div>
-        </div>
-
-        <div class="step-card">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h4>Enable Vercel Blob Storage</h4>
-            <p>In your Vercel Dashboard, go to <strong>Storage</strong> &rarr; Click <strong>Create Database</strong> &rarr; Select <strong>Blob</strong> &rarr; Click <strong>Create</strong>.</p>
-          </div>
-        </div>
-
-        <div class="step-card">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h4>Connect Blob Token</h4>
-            <p>Click <strong>Quickstart / Settings</strong> in your Blob store, copy <code>BLOB_READ_WRITE_TOKEN</code>, and add it to your Vercel Project Environment Variables!</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="api-snippet-box">
-        <h3>REST API Endpoints for Integration (WinLocker, scripts, or apps):</h3>
-        <pre><code>// Upload File
-POST /api/storage/upload (multipart/form-data: 'files')
-
-// Get Storage Stats & Quota
-GET /api/storage/stats
-
-// List All Files
-GET /api/storage/files?category=all&search=vault
-
-// Delete File
-DELETE /api/storage/delete?url=&lt;file_url&gt;</code></pre>
-      </div>
-    </section>
   </main>
 
   <!-- Toast Notification -->
