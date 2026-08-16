@@ -26,13 +26,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Local storage fallback directory
-const LOCAL_STORAGE_DIR = path.join(process.cwd(), 'uploads');
+// Local storage fallback directory (uses /tmp on serverless environments)
+const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const LOCAL_STORAGE_DIR = isServerless ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(LOCAL_STORAGE_DIR)) {
   try {
     fs.mkdirSync(LOCAL_STORAGE_DIR, { recursive: true });
   } catch (e) {
-    // Read-only filesystem in some serverless environments
+    console.warn('Could not create uploads directory:', e.message);
   }
 }
 
