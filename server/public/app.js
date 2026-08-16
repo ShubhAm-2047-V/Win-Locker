@@ -183,6 +183,8 @@ async function fetchFiles() {
 // ============================================================
 function getCategoryIconSvg(category) {
   switch (category) {
+    case 'folder':
+      return `<svg viewBox="0 0 24 24" fill="currentColor" style="color:#f59e0b;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.89 2 1.99 2H20c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
     case 'image':
       return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21"/></svg>`;
     case 'document':
@@ -196,12 +198,13 @@ function getCategoryIconSvg(category) {
     case 'code':
       return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
     default:
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
   }
 }
 
 function getCardClass(category) {
   switch (category) {
+    case 'folder': return 'folder-card';
     case 'image': return 'photo-card';
     case 'document': return 'doc-card';
     case 'video': return 'video-card';
@@ -214,6 +217,7 @@ function getCardClass(category) {
 
 function getBadgeClass(category) {
   switch (category) {
+    case 'folder': return 'badge-folder';
     case 'image': return 'badge-photo';
     case 'document': return 'badge-doc';
     case 'video': return 'badge-video';

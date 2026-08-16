@@ -55,9 +55,25 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+// Helper: Clean display name (strip timestamp prefix and meta extensions)
+function getCleanDisplayName(filename) {
+  if (!filename) return '';
+  let clean = filename;
+  if (clean.endsWith('.folder_meta')) {
+    clean = clean.replace('.folder_meta', '');
+  }
+  // Strip leading timestamp (e.g. 1786896293052-filename.pdf -> filename.pdf)
+  clean = clean.replace(/^\d{13}-/, '');
+  return clean;
+}
+
 // Helper: Determine category by extension
 function categorizeFileType(filename) {
-  const ext = path.extname(filename || '').toLowerCase();
+  if (!filename) return 'other';
+  if (filename.endsWith('.folder_meta') || filename.endsWith('.folder') || filename.endsWith('/')) {
+    return 'folder';
+  }
+  const ext = path.extname(filename).toLowerCase();
   const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
   const docExts = ['.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.csv', '.xlsx', '.pptx'];
   const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.enc', '.vault'];
@@ -92,19 +108,24 @@ async function getAllFiles() {
         listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
       }
       const response = await vercelBlob.list(listOptions);
-      blobFiles = (response.blobs || []).map(blob => ({
-        id: blob.url,
-        name: blob.pathname,
-        pathname: blob.pathname,
-        url: blob.url,
-        downloadUrl: blob.downloadUrl || blob.url,
-        size: blob.size,
-        sizeFormatted: formatBytes(blob.size),
-        uploadedAt: blob.uploadedAt,
-        contentType: blob.contentType || 'application/octet-stream',
-        category: categorizeFileType(blob.pathname),
-        source: 'vercel-blob'
-      }));
+      blobFiles = (response.blobs || []).map(blob => {
+        const cat = categorizeFileType(blob.pathname);
+        return {
+          id: blob.url,
+          name: getCleanDisplayName(blob.pathname),
+          rawName: blob.pathname,
+          pathname: blob.pathname,
+          url: blob.url,
+          downloadUrl: blob.downloadUrl || blob.url,
+          size: blob.size,
+          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(blob.size),
+          uploadedAt: blob.uploadedAt,
+          contentType: blob.contentType || 'application/octet-stream',
+          category: cat,
+          isFolder: cat === 'folder',
+          source: 'vercel-blob'
+        };
+      });
     } catch (error) {
       console.warn('Error fetching Vercel blobs:', error.message);
     }
@@ -118,17 +139,20 @@ async function getAllFiles() {
       localFiles = files.map(file => {
         const filePath = path.join(LOCAL_STORAGE_DIR, file);
         const stats = fs.statSync(filePath);
+        const cat = categorizeFileType(file);
         return {
           id: file,
-          name: file,
+          name: getCleanDisplayName(file),
+          rawName: file,
           pathname: file,
           url: `/api/storage/local/${encodeURIComponent(file)}`,
           downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
           size: stats.size,
-          sizeFormatted: formatBytes(stats.size),
+          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(stats.size),
           uploadedAt: stats.mtime,
           contentType: 'application/octet-stream',
-          category: categorizeFileType(file),
+          category: cat,
+          isFolder: cat === 'folder',
           source: 'local-storage'
         };
       });

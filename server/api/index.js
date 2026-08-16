@@ -55,9 +55,25 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+// Helper: Clean display name (strip timestamp prefix and meta extensions)
+function getCleanDisplayName(filename) {
+  if (!filename) return '';
+  let clean = filename;
+  if (clean.endsWith('.folder_meta')) {
+    clean = clean.replace('.folder_meta', '');
+  }
+  // Strip leading timestamp (e.g. 1786896293052-filename.pdf -> filename.pdf)
+  clean = clean.replace(/^\d{13}-/, '');
+  return clean;
+}
+
 // Helper: Determine category by extension
 function categorizeFileType(filename) {
-  const ext = path.extname(filename || '').toLowerCase();
+  if (!filename) return 'other';
+  if (filename.endsWith('.folder_meta') || filename.endsWith('.folder') || filename.endsWith('/')) {
+    return 'folder';
+  }
+  const ext = path.extname(filename).toLowerCase();
   const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
   const docExts = ['.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.csv', '.xlsx', '.pptx'];
   const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.enc', '.vault'];
@@ -92,19 +108,24 @@ async function getAllFiles() {
         listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
       }
       const response = await vercelBlob.list(listOptions);
-      blobFiles = (response.blobs || []).map(blob => ({
-        id: blob.url,
-        name: blob.pathname,
-        pathname: blob.pathname,
-        url: blob.url,
-        downloadUrl: blob.downloadUrl || blob.url,
-        size: blob.size,
-        sizeFormatted: formatBytes(blob.size),
-        uploadedAt: blob.uploadedAt,
-        contentType: blob.contentType || 'application/octet-stream',
-        category: categorizeFileType(blob.pathname),
-        source: 'vercel-blob'
-      }));
+      blobFiles = (response.blobs || []).map(blob => {
+        const cat = categorizeFileType(blob.pathname);
+        return {
+          id: blob.url,
+          name: getCleanDisplayName(blob.pathname),
+          rawName: blob.pathname,
+          pathname: blob.pathname,
+          url: blob.url,
+          downloadUrl: blob.downloadUrl || blob.url,
+          size: blob.size,
+          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(blob.size),
+          uploadedAt: blob.uploadedAt,
+          contentType: blob.contentType || 'application/octet-stream',
+          category: cat,
+          isFolder: cat === 'folder',
+          source: 'vercel-blob'
+        };
+      });
     } catch (error) {
       console.warn('Error fetching Vercel blobs:', error.message);
     }
@@ -118,17 +139,20 @@ async function getAllFiles() {
       localFiles = files.map(file => {
         const filePath = path.join(LOCAL_STORAGE_DIR, file);
         const stats = fs.statSync(filePath);
+        const cat = categorizeFileType(file);
         return {
           id: file,
-          name: file,
+          name: getCleanDisplayName(file),
+          rawName: file,
           pathname: file,
           url: `/api/storage/local/${encodeURIComponent(file)}`,
           downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
           size: stats.size,
-          sizeFormatted: formatBytes(stats.size),
+          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(stats.size),
           uploadedAt: stats.mtime,
           contentType: 'application/octet-stream',
-          category: categorizeFileType(file),
+          category: cat,
+          isFolder: cat === 'folder',
           source: 'local-storage'
         };
       });
@@ -163,27 +187,15 @@ app.get('/api/test-put', async (req, res) => {
   }
   try {
     const putOptions = {
-      access: 'private'
+      access: 'public'
     };
     if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
       putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
     }
     const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', putOptions);
-    return res.json({ success: true, accessUsed: 'private', blob });
+    return res.json({ success: true, accessUsed: 'public', blob });
   } catch (err) {
-    // Try public fallback
-    try {
-      const pubOptions = {
-        access: 'public'
-      };
-      if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
-        pubOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
-      }
-      const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', pubOptions);
-      return res.json({ success: true, accessUsed: 'public', blob });
-    } catch (pubErr) {
-      return res.status(500).json({ success: false, privateError: err.message, publicError: pubErr.message });
-    }
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -203,6 +215,7 @@ app.get('/api/storage/stats', async (req, res) => {
       archive: { count: 0, bytes: 0 },
       media: { count: 0, bytes: 0 },
       code: { count: 0, bytes: 0 },
+      folder: { count: 0, bytes: 0 },
       other: { count: 0, bytes: 0 }
     };
 
@@ -249,7 +262,7 @@ app.get('/api/storage/files', async (req, res) => {
     // Filter by search query
     if (search) {
       const q = search.toLowerCase();
-      files = files.filter(f => f.name.toLowerCase().includes(q));
+      files = files.filter(f => f.name.toLowerCase().includes(q) || f.rawName.toLowerCase().includes(q));
     }
 
     // Filter by category
@@ -295,44 +308,33 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
         let blob = null;
         let blobError = null;
 
-        // Try private access first (matches private stores)
         try {
           const putOptions = {
-            access: 'private',
+            access: 'public',
             contentType: file.mimetype || 'application/octet-stream'
           };
           if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
             putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
           }
           blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
-        } catch (privErr) {
-          blobError = privErr;
-          // Fallback to public access (matches public stores)
-          try {
-            const pubOptions = {
-              access: 'public',
-              contentType: file.mimetype || 'application/octet-stream'
-            };
-            if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
-              pubOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
-            }
-            blob = await vercelBlob.put(uniqueFileName, file.buffer, pubOptions);
-            blobError = null;
-          } catch (pubErr) {
-            blobError = pubErr;
-          }
+        } catch (pubErr) {
+          blobError = pubErr;
         }
 
         if (blob) {
+          const cat = categorizeFileType(uniqueFileName);
           uploadedResults.push({
-            name: uniqueFileName,
+            name: getCleanDisplayName(uniqueFileName),
+            rawName: uniqueFileName,
             originalName: file.originalname,
             url: blob.url,
             downloadUrl: blob.downloadUrl || blob.url,
             pathname: blob.pathname,
             size: file.size,
-            sizeFormatted: formatBytes(file.size),
+            sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(file.size),
             contentType: blob.contentType,
+            category: cat,
+            isFolder: cat === 'folder',
             uploadedAt: new Date().toISOString(),
             source: 'vercel-blob'
           });
@@ -354,15 +356,19 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
           console.warn('Local file write fallback:', fsErr.message);
         }
 
+        const cat = categorizeFileType(uniqueFileName);
         uploadedResults.push({
-          name: uniqueFileName,
+          name: getCleanDisplayName(uniqueFileName),
+          rawName: uniqueFileName,
           originalName: file.originalname,
           url: `/api/storage/local/${encodeURIComponent(uniqueFileName)}`,
           downloadUrl: `/api/storage/local/${encodeURIComponent(uniqueFileName)}?download=1`,
           pathname: uniqueFileName,
           size: file.size,
-          sizeFormatted: formatBytes(file.size),
+          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(file.size),
           contentType: file.mimetype || 'application/octet-stream',
+          category: cat,
+          isFolder: cat === 'folder',
           uploadedAt: new Date().toISOString()
         });
       }
