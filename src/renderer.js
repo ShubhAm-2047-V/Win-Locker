@@ -406,8 +406,13 @@ function renderGrid(folders, items) {
     folders.forEach(folder => {
       const card = document.createElement('div');
       card.className = 'item-card folder-card';
+      let cloudBadgeHtml = '';
+      if (folder.isSelectiveBackup || folder.cloudSyncedAt) {
+        cloudBadgeHtml = `<div class="cloud-synced-pill" title="Saved to Vercel Cloud Storage&#10;Synced: ${folder.cloudSyncedAt ? new Date(folder.cloudSyncedAt).toLocaleString() : 'Yes'}">☁️ Cloud</div>`;
+      }
 
       card.innerHTML = `
+        ${cloudBadgeHtml}
         <button class="item-menu-btn" title="Options">
           <svg style="width: 14px; height: 14px; fill: var(--text-muted);" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
         </button>
