@@ -162,7 +162,9 @@ app.get('/api/test-put', async (req, res) => {
     return res.json({ success: false, error: '@vercel/blob module not loaded' });
   }
   try {
-    const putOptions = {};
+    const putOptions = {
+      access: 'public'
+    };
     if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
       putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
     }
