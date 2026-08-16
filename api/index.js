@@ -83,15 +83,16 @@ function getStorageMode() {
 // Helper: Fetch all items
 async function getAllFiles() {
   const mode = getStorageMode();
+  let blobFiles = [];
 
   if (mode === 'vercel-blob') {
     try {
       const listOptions = {};
-      if (process.env.BLOB_READ_WRITE_TOKEN) {
-        listOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
+      if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+        listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
       }
       const response = await vercelBlob.list(listOptions);
-      return (response.blobs || []).map(blob => ({
+      blobFiles = (response.blobs || []).map(blob => ({
         id: blob.url,
         name: blob.pathname,
         pathname: blob.pathname,
@@ -105,34 +106,38 @@ async function getAllFiles() {
         source: 'vercel-blob'
       }));
     } catch (error) {
-      console.error('Error fetching Vercel blobs:', error.message);
-      if (error.message && error.message.includes('Access denied')) {
-        console.warn('Vercel Blob access denied. Check if store is Private or token was revoked.');
-      }
-      return [];
+      console.warn('Error fetching Vercel blobs:', error.message);
     }
-  } else {
-    // Local storage listing
-    if (!fs.existsSync(LOCAL_STORAGE_DIR)) return [];
-    const files = fs.readdirSync(LOCAL_STORAGE_DIR);
-    return files.map(file => {
-      const filePath = path.join(LOCAL_STORAGE_DIR, file);
-      const stats = fs.statSync(filePath);
-      return {
-        id: file,
-        name: file,
-        pathname: file,
-        url: `/api/storage/local/${encodeURIComponent(file)}`,
-        downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
-        size: stats.size,
-        sizeFormatted: formatBytes(stats.size),
-        uploadedAt: stats.mtime,
-        contentType: 'application/octet-stream',
-        category: categorizeFileType(file),
-        source: 'local-storage'
-      };
-    });
   }
+
+  // Also include any local / fallback files
+  let localFiles = [];
+  try {
+    if (fs.existsSync(LOCAL_STORAGE_DIR)) {
+      const files = fs.readdirSync(LOCAL_STORAGE_DIR);
+      localFiles = files.map(file => {
+        const filePath = path.join(LOCAL_STORAGE_DIR, file);
+        const stats = fs.statSync(filePath);
+        return {
+          id: file,
+          name: file,
+          pathname: file,
+          url: `/api/storage/local/${encodeURIComponent(file)}`,
+          downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
+          size: stats.size,
+          sizeFormatted: formatBytes(stats.size),
+          uploadedAt: stats.mtime,
+          contentType: 'application/octet-stream',
+          category: categorizeFileType(file),
+          source: 'local-storage'
+        };
+      });
+    }
+  } catch (e) {
+    console.warn('Error reading local directory:', e.message);
+  }
+
+  return [...blobFiles, ...localFiles];
 }
 
 // --- API Endpoints ---
@@ -253,10 +258,11 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
     for (const file of req.files) {
       const cleanFileName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
       const uniqueFileName = `${Date.now()}-${cleanFileName}`;
+      let uploadedToBlob = false;
 
       if (mode === 'vercel-blob') {
-        let blob;
         const putOptions = {
+          access: 'public',
           contentType: file.mimetype || 'application/octet-stream'
         };
         if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
@@ -264,32 +270,32 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
         }
 
         try {
-          // Try public store access
-          blob = await vercelBlob.put(uniqueFileName, file.buffer, { ...putOptions, access: 'public' });
+          const blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
+          uploadedResults.push({
+            name: uniqueFileName,
+            originalName: file.originalname,
+            url: blob.url,
+            downloadUrl: blob.downloadUrl || blob.url,
+            pathname: blob.pathname,
+            size: file.size,
+            sizeFormatted: formatBytes(file.size),
+            contentType: blob.contentType,
+            uploadedAt: new Date().toISOString()
+          });
+          uploadedToBlob = true;
         } catch (putErr) {
-          if (putErr.message && putErr.message.includes('access')) {
-            // Fallback for private stores
-            blob = await vercelBlob.put(uniqueFileName, file.buffer, { ...putOptions, access: 'private' });
-          } else {
-            throw putErr;
-          }
+          console.warn('Vercel Blob upload failed, using serverless fallback:', putErr.message);
         }
+      }
 
-        uploadedResults.push({
-          name: uniqueFileName,
-          originalName: file.originalname,
-          url: blob.url,
-          downloadUrl: blob.downloadUrl || blob.url,
-          pathname: blob.pathname,
-          size: file.size,
-          sizeFormatted: formatBytes(file.size),
-          contentType: blob.contentType,
-          uploadedAt: new Date().toISOString()
-        });
-      } else {
-        // Local upload
+      if (!uploadedToBlob) {
+        // Fallback local storage upload
         const targetPath = path.join(LOCAL_STORAGE_DIR, uniqueFileName);
-        fs.writeFileSync(targetPath, file.buffer);
+        try {
+          fs.writeFileSync(targetPath, file.buffer);
+        } catch (fsErr) {
+          console.warn('Local file write fallback:', fsErr.message);
+        }
 
         uploadedResults.push({
           name: uniqueFileName,
