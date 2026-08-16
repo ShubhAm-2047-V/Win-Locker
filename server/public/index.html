@@ -3,207 +3,211 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vercel Cloud Storage & Vault Explorer</title>
-  <meta name="description" content="Manage and visualize your Vercel Blob cloud storage with free tier statistics, upload, and file explorer.">
+  <title>Magic Cal - Cloud Vault</title>
+  <meta name="description" content="Stealth Cloud Vault & Storage Explorer with 3D Liquid Crystal Glassmorphism.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="background-glow top-left"></div>
-  <div class="background-glow bottom-right"></div>
 
-  <!-- Header / Navigation -->
-  <header class="app-header">
-    <div class="logo-container">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2L2 19.5h20L12 2z" fill="url(#triangle-grad)" stroke="none"/>
-          <defs>
-            <linearGradient id="triangle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="100%" stop-color="#a1a1aa"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div>
-        <h1 class="app-title">Vercel Storage Hub</h1>
-        <p class="app-subtitle">Cloud Storage & Vault Manager</p>
-      </div>
-    </div>
+  <!-- Hidden File Input for Uploads -->
+  <input type="file" id="fileInput" multiple style="display: none;">
 
-    <div class="header-actions">
-      <div id="storageModeBadge" class="badge badge-warning">
-        <span class="pulse-dot"></span>
-        <span id="storageModeText">Checking Mode...</span>
+  <!-- ============================================================ -->
+  <!-- MAIN APPLICATION VAULT INTERFACE                             -->
+  <!-- ============================================================ -->
+  <div id="appScreen" class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <div class="app-brand" id="brandBtn">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        </div>
+        <div class="brand-info">
+          <div class="brand-title">Magic Cal</div>
+          <div class="brand-subtitle">Stealth Cloud Vault</div>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm" id="refreshBtn" title="Refresh storage">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-        </svg>
-        Refresh
+
+      <div class="nav-section-title">Categories</div>
+      <ul class="nav-list">
+        <li class="nav-item active" data-category="all">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/></svg>
+            <span>All Items</span>
+          </div>
+          <span class="badge-count" id="countAll">0</span>
+        </li>
+        <li class="nav-item" data-category="document">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <span>Documents</span>
+          </div>
+          <span class="badge-count" id="countDoc">0</span>
+        </li>
+        <li class="nav-item" data-category="image">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            <span>Photos & Images</span>
+          </div>
+          <span class="badge-count" id="countImg">0</span>
+        </li>
+        <li class="nav-item" data-category="video">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            <span>Videos</span>
+          </div>
+          <span class="badge-count" id="countVideo">0</span>
+        </li>
+        <li class="nav-item" data-category="audio">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            <span>Audio & Music</span>
+          </div>
+          <span class="badge-count" id="countAudio">0</span>
+        </li>
+        <li class="nav-item" data-category="archive">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Archives & Vaults</span>
+          </div>
+          <span class="badge-count" id="countArchive">0</span>
+        </li>
+        <li class="nav-item" data-category="code">
+          <div class="nav-item-left">
+            <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Code & Scripts</span>
+          </div>
+          <span class="badge-count" id="countCode">0</span>
+        </li>
+      </ul>
+
+      <div class="sidebar-spacer"></div>
+
+      <!-- Storage Quota Widget -->
+      <div class="storage-widget">
+        <div class="storage-title">
+          <span>Vault Usage</span>
+          <span id="storageSizeText">0 B</span>
+        </div>
+        <div class="storage-bar-bg">
+          <div id="storageBarFill" class="storage-bar-fill"></div>
+        </div>
+        <div class="storage-footer">
+          <span id="storagePercentText">0% Used</span>
+          <span id="storageQuotaText">of 1.00 GB</span>
+        </div>
+      </div>
+
+      <!-- Server Status / Storage Mode Badge -->
+      <button id="btnStorageMode" class="btn-lock" title="Storage Status">
+        <svg style="width: 17px; height: 17px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
+        <span id="storageModeText">Cloud Connected</span>
       </button>
-    </div>
-  </header>
+    </aside>
 
-  <!-- Main Container -->
-  <main class="main-container">
-    
-    <!-- Top Stats Section -->
-    <section class="stats-grid">
-      <!-- Storage Quota Card -->
-      <div class="card stat-card quota-card">
-        <div class="card-header">
-          <span class="card-title">Vercel Free Tier Storage</span>
-          <span class="badge badge-info" id="quotaLabel">1 GB Quota</span>
-        </div>
-        <div class="quota-body">
-          <div class="quota-numbers">
-            <h2 id="totalUsedText" class="stat-highlight">0 B</h2>
-            <span class="stat-meta">of <strong id="totalQuotaText">1.00 GB</strong> used</span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar" id="quotaProgressBar" style="width: 0%"></div>
-          </div>
-          <div class="quota-footer">
-            <span id="percentUsedText">0% Used</span>
-            <span id="freeRemainingText">1.00 GB Free</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Total Files Card -->
-      <div class="card stat-card">
-        <div class="card-header">
-          <span class="card-title">Stored Objects</span>
-          <div class="stat-icon-wrapper">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <header class="top-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button id="btnToggleSidebar" class="sidebar-toggle-btn" title="Toggle Sidebar">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
+          </button>
+          <div id="breadcrumbTrail" class="breadcrumbs">
+            <span class="crumb-item" onclick="selectCategory('all')">Vault</span>
+            <span class="crumb-separator">/</span>
+            <span class="crumb-active" id="currentCategoryBreadcrumb">All Items</span>
           </div>
         </div>
-        <div class="stat-value" id="totalFilesCount">0</div>
-        <div class="stat-description">Total Blobs uploaded</div>
-      </div>
 
-      <!-- File Type Breakdown Card -->
-      <div class="card stat-card">
-        <div class="card-header">
-          <span class="card-title">Type Breakdown</span>
-          <div class="stat-icon-wrapper">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <pie cx="12" cy="12" r="10"></pie>
-              <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
-              <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+        <div class="header-actions">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search files...">
+          </div>
+
+          <button id="btnRefresh" class="btn-secondary" title="Refresh vault files">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
             </svg>
+            <span>Refresh</span>
+          </button>
+
+          <button id="btnImportFiles" class="btn-add" title="Import & upload files">
+            <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>Import Files</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="vaultBody" class="vault-body">
+        <!-- Drag and Drop Overlay -->
+        <div id="dropzoneOverlay" class="dropzone-overlay">
+          <svg style="width: 60px; height: 60px; fill: #a855f7;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+          <div class="dropzone-title">Drop Files Here to Upload & Encrypt</div>
+          <div class="dropzone-sub">Release to store securely in your Cloud Vault</div>
+        </div>
+
+        <!-- Items Grid -->
+        <div id="itemsGrid" class="items-grid"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24"><path fill="none" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
+          <h3 class="empty-title">This Folder is Empty</h3>
+          <p class="empty-desc">Drag & drop files anywhere, or click "Import Files" above to upload.</p>
         </div>
-        <div class="breakdown-pills" id="breakdownPills">
-          <div class="breakdown-item"><span class="dot img"></span> Images: <strong id="imgCount">0</strong></div>
-          <div class="breakdown-item"><span class="dot doc"></span> Docs: <strong id="docCount">0</strong></div>
-          <div class="breakdown-item"><span class="dot arc"></span> Archives: <strong id="arcCount">0</strong></div>
-          <div class="breakdown-item"><span class="dot oth"></span> Others: <strong id="othCount">0</strong></div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Upload Zone -->
-    <section class="card upload-section">
-      <div class="dropzone" id="dropzone">
-        <input type="file" id="fileInput" multiple class="file-input-hidden">
-        <div class="dropzone-content">
-          <div class="upload-icon-container">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-          </div>
-          <h3>Upload to Vercel Storage</h3>
-          <p class="dropzone-sub">Drag and drop any files here, or <button type="button" class="btn-link" id="browseBtn">browse files</button></p>
-          <span class="upload-limit-note">Max 50MB per file &bull; Multi-file support &bull; Instant Cloud Sync</span>
+        <!-- Unlocked Status Badge -->
+        <div class="unlocked-status-badge">
+          <span class="status-dot"></span>
+          <span id="vaultStatusText">Cloud Vault Connected</span>
         </div>
       </div>
+    </main>
+  </div>
 
-      <!-- Upload Progress Container -->
-      <div class="upload-progress-card hidden" id="uploadProgressCard">
-        <div class="progress-info">
-          <span id="uploadStatusText">Uploading files...</span>
-          <span id="uploadPercentText">0%</span>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="uploadProgressBar" style="width: 0%"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Explorer Section -->
-    <section class="card explorer-section">
-      <!-- Toolbar -->
-      <div class="explorer-toolbar">
-        <div class="search-box">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input type="text" id="searchInput" placeholder="Search files by name...">
-        </div>
-
-        <div class="filter-tabs">
-          <button class="tab active" data-category="all">All</button>
-          <button class="tab" data-category="image">Images</button>
-          <button class="tab" data-category="document">Docs</button>
-          <button class="tab" data-category="archive">Vaults / Archives</button>
-          <button class="tab" data-category="media">Media</button>
-          <button class="tab" data-category="code">Code</button>
-        </div>
-      </div>
-
-      <!-- File List / Grid -->
-      <div class="file-list-container">
-        <div class="file-table-header">
-          <div class="col-name">File Name</div>
-          <div class="col-size">Size</div>
-          <div class="col-date">Uploaded Date</div>
-          <div class="col-actions">Actions</div>
-        </div>
-
-        <div id="fileList" class="file-list">
-          <div class="empty-state">
-            <div class="spinner"></div>
-            <p>Loading files from storage...</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Toast Notification -->
-  <div id="toast" class="toast"></div>
-
-  <!-- Preview Modal -->
-  <div id="previewModal" class="modal-overlay hidden">
-    <div class="modal-card">
+  <!-- ============================================================ -->
+  <!-- MEDIA PREVIEW MODAL                                          -->
+  <!-- ============================================================ -->
+  <div id="mediaModal" class="modal-overlay">
+    <div class="modal-container">
       <div class="modal-header">
-        <h3 id="modalFileName">Preview</h3>
-        <button class="btn-close" id="modalCloseBtn">&times;</button>
+        <div id="mediaModalTitle" class="modal-title">File Preview</div>
+        <button id="btnCloseMediaModal" class="modal-close-btn" title="Close">&times;</button>
       </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Dynamic preview content -->
-      </div>
+      <div id="mediaModalBody" class="modal-body"></div>
       <div class="modal-footer">
-        <a id="modalDownloadBtn" href="#" target="_blank" class="btn btn-primary btn-sm">Download</a>
-        <button id="modalCopyBtn" class="btn btn-secondary btn-sm">Copy Link</button>
+        <button id="btnModalCopy" class="btn-secondary" title="Copy Direct Link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Link
+        </button>
+        <a id="btnModalDownload" href="#" target="_blank" class="btn-add" style="text-decoration: none;" title="Download File">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
       </div>
     </div>
   </div>
+
+  <!-- ============================================================ -->
+  <!-- 3D CRYSTAL GLASS CONTEXT MENU                                -->
+  <!-- ============================================================ -->
+  <div id="glassContextMenu" class="glass-context-menu" style="display: none;"></div>
+
+  <!-- ============================================================ -->
+  <!-- TOAST NOTIFICATION CONTAINER                                 -->
+  <!-- ============================================================ -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>
