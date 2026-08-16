@@ -106,11 +106,10 @@ async function getAllFiles() {
       }));
     } catch (error) {
       console.error('Error fetching Vercel blobs:', error.message);
-      // Fallback to local if vercelBlob fails due to unlinked store
-      if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
-        return [];
+      if (error.message && error.message.includes('Access denied')) {
+        console.warn('Vercel Blob access denied. Check if store is Private or token was revoked.');
       }
-      throw error;
+      return [];
     }
   } else {
     // Local storage listing
