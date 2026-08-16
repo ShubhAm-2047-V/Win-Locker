@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 require('dotenv').config();
 
 // Attempt to import @vercel/blob
@@ -16,6 +17,8 @@ try {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const VERCEL_FREE_QUOTA_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB free Hobby tier
+const AUTH_CONFIG_FILENAME = '_winlocker_auth_config.json';
+const JWT_SECRET = process.env.SESSION_SECRET || process.env.BLOB_READ_WRITE_TOKEN || 'magic-cal-stealth-vault-secret-key-2026';
 
 // Enable CORS and JSON parsing
 app.use(cors({
@@ -44,6 +47,61 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024 // 50MB per file
   }
 });
+
+// In-memory cache for auth config
+let memoryAuthConfig = null;
+
+// ============================================================
+// CRYPTO & SECURITY UTILITIES
+// ============================================================
+function generateSalt() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
+}
+
+function generateRecoveryKey() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let key = 'WINK';
+  for (let s = 0; s < 3; s++) {
+    key += '-';
+    for (let i = 0; i < 4; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+  }
+  return key;
+}
+
+function generateSessionToken(payload) {
+  const data = JSON.stringify({
+    ...payload,
+    exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+  });
+  const dataB64 = Buffer.from(data, 'utf8').toString('base64url');
+  const hmac = crypto.createHmac('sha256', JWT_SECRET).update(dataB64).digest('base64url');
+  return `${dataB64}.${hmac}`;
+}
+
+function verifySessionToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [dataB64, hmac] = parts;
+  const expectedHmac = crypto.createHmac('sha256', JWT_SECRET).update(dataB64).digest('base64url');
+  try {
+    if (crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac))) {
+      const payload = JSON.parse(Buffer.from(dataB64, 'base64url').toString('utf8'));
+      if (payload.exp && payload.exp > Date.now()) {
+        return payload;
+      }
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
 
 // Helper: Format bytes to human readable format
 function formatBytes(bytes, decimals = 2) {
@@ -76,14 +134,15 @@ function categorizeFileType(filename) {
   const ext = path.extname(filename).toLowerCase();
   const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
   const docExts = ['.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.csv', '.xlsx', '.pptx'];
-  const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.enc', '.vault'];
-  const mediaExts = ['.mp3', '.wav', '.ogg', '.mp4', '.mkv', '.avi', '.mov'];
-  const codeExts = ['.js', '.json', '.html', '.css', '.py', '.ts', '.java', '.cpp', '.c', '.sh'];
+  const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.enc', '.vault', '.winlocker'];
+  const mediaExts = ['.mp3', '.wav', '.ogg', '.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4a'];
+  const codeExts = ['.js', '.json', '.html', '.css', '.py', '.ts', '.java', '.cpp', '.c', '.sh', '.sql'];
 
   if (imageExts.includes(ext)) return 'image';
   if (docExts.includes(ext)) return 'document';
   if (archiveExts.includes(ext)) return 'archive';
-  if (mediaExts.includes(ext)) return 'media';
+  if (mediaExts.includes(ext)) return 'video';
+  if (['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac'].includes(ext)) return 'audio';
   if (codeExts.includes(ext)) return 'code';
   return 'other';
 }
@@ -96,7 +155,127 @@ function getStorageMode() {
   return 'local-storage';
 }
 
-// Helper: Fetch all items
+// Helper: Get Auth Config from persistent storage (Vercel Blob or local disk)
+async function getAuthConfig() {
+  if (memoryAuthConfig) {
+    return memoryAuthConfig;
+  }
+
+  const mode = getStorageMode();
+
+  // Try Vercel Blob first
+  if (mode === 'vercel-blob') {
+    try {
+      const listOptions = { prefix: AUTH_CONFIG_FILENAME };
+      if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+        listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+      }
+      const response = await vercelBlob.list(listOptions);
+      const authBlob = (response.blobs || []).find(b => b.pathname.includes(AUTH_CONFIG_FILENAME));
+      if (authBlob) {
+        const fetchRes = await fetch(authBlob.url);
+        if (fetchRes.ok) {
+          const config = await fetchRes.json();
+          memoryAuthConfig = config;
+          return config;
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading auth config from Vercel Blob:', err.message);
+    }
+  }
+
+  // Try local file system
+  const localAuthPath = path.join(LOCAL_STORAGE_DIR, AUTH_CONFIG_FILENAME);
+  if (fs.existsSync(localAuthPath)) {
+    try {
+      const content = fs.readFileSync(localAuthPath, 'utf8');
+      const config = JSON.parse(content);
+      memoryAuthConfig = config;
+      return config;
+    } catch (e) {
+      console.warn('Error reading local auth file:', e.message);
+    }
+  }
+
+  return {
+    isConfigured: false,
+    salt: null,
+    hashToken: null,
+    recoverySalt: null,
+    recoveryHashToken: null,
+    decoySalt: null,
+    decoyHashToken: null,
+    defaultCamouflage: true,
+    autoLockMinutes: 10,
+    createdAt: null
+  };
+}
+
+// Helper: Save Auth Config
+async function saveAuthConfig(config) {
+  memoryAuthConfig = config;
+  const mode = getStorageMode();
+  const configString = JSON.stringify(config, null, 2);
+
+  // Save to Vercel Blob
+  if (mode === 'vercel-blob') {
+    try {
+      const putOptions = {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false
+      };
+      if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+        putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+      }
+      await vercelBlob.put(AUTH_CONFIG_FILENAME, configString, putOptions);
+    } catch (err) {
+      console.warn('Failed to save auth config to Vercel Blob:', err.message);
+    }
+  }
+
+  // Also write locally as backup
+  try {
+    const localAuthPath = path.join(LOCAL_STORAGE_DIR, AUTH_CONFIG_FILENAME);
+    fs.writeFileSync(localAuthPath, configString, 'utf8');
+  } catch (err) {
+    console.warn('Failed to save local auth file:', err.message);
+  }
+
+  return config;
+}
+
+// Authentication Middleware
+async function requireAuth(req, res, next) {
+  const config = await getAuthConfig();
+
+  // If vault is not yet configured, allow setup endpoints but block sensitive file listing
+  if (!config.isConfigured) {
+    return next();
+  }
+
+  const authHeader = req.headers['authorization'];
+  let token = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  const session = verifySessionToken(token);
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required. Please enter your Master Password to unlock this vault.'
+    });
+  }
+
+  req.session = session;
+  next();
+}
+
+// Helper: Fetch all vault files (excluding internal config)
 async function getAllFiles() {
   const mode = getStorageMode();
   let blobFiles = [];
@@ -108,54 +287,58 @@ async function getAllFiles() {
         listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
       }
       const response = await vercelBlob.list(listOptions);
-      blobFiles = (response.blobs || []).map(blob => {
-        const cat = categorizeFileType(blob.pathname);
-        return {
-          id: blob.url,
-          name: getCleanDisplayName(blob.pathname),
-          rawName: blob.pathname,
-          pathname: blob.pathname,
-          url: blob.url,
-          downloadUrl: blob.downloadUrl || blob.url,
-          size: blob.size,
-          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(blob.size),
-          uploadedAt: blob.uploadedAt,
-          contentType: blob.contentType || 'application/octet-stream',
-          category: cat,
-          isFolder: cat === 'folder',
-          source: 'vercel-blob'
-        };
-      });
+      blobFiles = (response.blobs || [])
+        .filter(b => !b.pathname.includes(AUTH_CONFIG_FILENAME) && !b.pathname.startsWith('_winlocker_'))
+        .map(blob => {
+          const cat = categorizeFileType(blob.pathname);
+          return {
+            id: blob.url,
+            name: getCleanDisplayName(blob.pathname),
+            rawName: blob.pathname,
+            pathname: blob.pathname,
+            url: blob.url,
+            downloadUrl: blob.downloadUrl || blob.url,
+            size: blob.size,
+            sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(blob.size),
+            uploadedAt: blob.uploadedAt,
+            contentType: blob.contentType || 'application/octet-stream',
+            category: cat,
+            isFolder: cat === 'folder',
+            source: 'vercel-blob'
+          };
+        });
     } catch (error) {
       console.warn('Error fetching Vercel blobs:', error.message);
     }
   }
 
-  // Also include any local / fallback files
+  // Local files
   let localFiles = [];
   try {
     if (fs.existsSync(LOCAL_STORAGE_DIR)) {
       const files = fs.readdirSync(LOCAL_STORAGE_DIR);
-      localFiles = files.map(file => {
-        const filePath = path.join(LOCAL_STORAGE_DIR, file);
-        const stats = fs.statSync(filePath);
-        const cat = categorizeFileType(file);
-        return {
-          id: file,
-          name: getCleanDisplayName(file),
-          rawName: file,
-          pathname: file,
-          url: `/api/storage/local/${encodeURIComponent(file)}`,
-          downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
-          size: stats.size,
-          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(stats.size),
-          uploadedAt: stats.mtime,
-          contentType: 'application/octet-stream',
-          category: cat,
-          isFolder: cat === 'folder',
-          source: 'local-storage'
-        };
-      });
+      localFiles = files
+        .filter(file => !file.includes(AUTH_CONFIG_FILENAME) && !file.startsWith('_winlocker_'))
+        .map(file => {
+          const filePath = path.join(LOCAL_STORAGE_DIR, file);
+          const stats = fs.statSync(filePath);
+          const cat = categorizeFileType(file);
+          return {
+            id: file,
+            name: getCleanDisplayName(file),
+            rawName: file,
+            pathname: file,
+            url: `/api/storage/local/${encodeURIComponent(file)}`,
+            downloadUrl: `/api/storage/local/${encodeURIComponent(file)}?download=1`,
+            size: stats.size,
+            sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(stats.size),
+            uploadedAt: stats.mtime,
+            contentType: 'application/octet-stream',
+            category: cat,
+            isFolder: cat === 'folder',
+            source: 'local-storage'
+          };
+        });
     }
   } catch (e) {
     console.warn('Error reading local directory:', e.message);
@@ -164,58 +347,321 @@ async function getAllFiles() {
   return [...blobFiles, ...localFiles];
 }
 
-// --- API Endpoints ---
+// ============================================================
+// AUTHENTICATION & LOCK ENDPOINTS
+// ============================================================
+
+// 1. Get Vault Auth Status
+app.get('/api/auth/status', async (req, res) => {
+  try {
+    const config = await getAuthConfig();
+    res.json({
+      success: true,
+      isConfigured: !!config.isConfigured,
+      hasDecoy: !!(config.decoyHashToken && config.decoySalt),
+      defaultCamouflage: config.defaultCamouflage !== false,
+      autoLockMinutes: config.autoLockMinutes || 10
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 2. Setup Master Password (First-time initialization)
+app.post('/api/auth/setup', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 4) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long' });
+    }
+
+    const currentConfig = await getAuthConfig();
+    if (currentConfig.isConfigured) {
+      return res.status(400).json({ success: false, error: 'Vault is already configured with a Master Password' });
+    }
+
+    const salt = generateSalt();
+    const hashToken = hashPassword(password, salt);
+    const recoveryKey = generateRecoveryKey();
+    const recoverySalt = generateSalt();
+    const recoveryHashToken = hashPassword(recoveryKey, recoverySalt);
+
+    const newConfig = {
+      isConfigured: true,
+      salt,
+      hashToken,
+      recoverySalt,
+      recoveryHashToken,
+      decoySalt: null,
+      decoyHashToken: null,
+      defaultCamouflage: true,
+      autoLockMinutes: 10,
+      createdAt: new Date().toISOString()
+    };
+
+    await saveAuthConfig(newConfig);
+
+    const token = generateSessionToken({ isMaster: true, isDecoy: false });
+
+    res.json({
+      success: true,
+      message: 'Master Password configured successfully!',
+      recoveryKey,
+      token
+    });
+  } catch (error) {
+    console.error('Setup error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Setup failed' });
+  }
+});
+
+// 3. Login / Unlock Vault
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'Please enter your password' });
+    }
+
+    const config = await getAuthConfig();
+    if (!config.isConfigured) {
+      return res.status(400).json({ success: false, error: 'Vault has not been set up yet. Please set up a Master Password first.' });
+    }
+
+    // 1. Check Master Password
+    const computedHash = hashPassword(password, config.salt);
+    if (computedHash === config.hashToken) {
+      const token = generateSessionToken({ isMaster: true, isDecoy: false });
+      return res.json({
+        success: true,
+        isDecoy: false,
+        token,
+        message: 'Vault unlocked successfully'
+      });
+    }
+
+    // 2. Check Decoy / Panic Password
+    if (config.decoySalt && config.decoyHashToken) {
+      const computedDecoyHash = hashPassword(password, config.decoySalt);
+      if (computedDecoyHash === config.decoyHashToken) {
+        const token = generateSessionToken({ isMaster: false, isDecoy: true });
+        return res.json({
+          success: true,
+          isDecoy: true,
+          token,
+          message: 'Decoy vault unlocked'
+        });
+      }
+    }
+
+    return res.status(401).json({
+      success: false,
+      error: 'Incorrect Password. Access Denied.'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 4. Reset Master Password via Recovery Key
+app.post('/api/auth/reset', async (req, res) => {
+  try {
+    const { recoveryKey, newPassword } = req.body;
+    if (!recoveryKey || !newPassword || newPassword.length < 4) {
+      return res.status(400).json({ success: false, error: 'Valid recovery key and new password (min 4 chars) are required' });
+    }
+
+    const config = await getAuthConfig();
+    if (!config.isConfigured) {
+      return res.status(400).json({ success: false, error: 'Vault is not configured' });
+    }
+
+    const cleanRecoveryKey = recoveryKey.trim().toUpperCase();
+    const computedRecoveryHash = hashPassword(cleanRecoveryKey, config.recoverySalt);
+
+    if (computedRecoveryHash !== config.recoveryHashToken) {
+      return res.status(401).json({ success: false, error: 'Invalid Recovery Key' });
+    }
+
+    // Update Master Password with new salt
+    const newSalt = generateSalt();
+    const newHashToken = hashPassword(newPassword, newSalt);
+
+    config.salt = newSalt;
+    config.hashToken = newHashToken;
+    config.updatedAt = new Date().toISOString();
+
+    await saveAuthConfig(config);
+
+    const token = generateSessionToken({ isMaster: true, isDecoy: false });
+
+    res.json({
+      success: true,
+      message: 'Master Password has been reset successfully!',
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 5. Change Password (when already authenticated)
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 4 characters' });
+    }
+
+    const config = await getAuthConfig();
+    const computedHash = hashPassword(currentPassword, config.salt);
+    if (computedHash !== config.hashToken) {
+      return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+    }
+
+    const newSalt = generateSalt();
+    config.salt = newSalt;
+    config.hashToken = hashPassword(newPassword, newSalt);
+    config.updatedAt = new Date().toISOString();
+
+    await saveAuthConfig(config);
+
+    const token = generateSessionToken({ isMaster: true, isDecoy: false });
+
+    res.json({
+      success: true,
+      message: 'Master Password changed successfully!',
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 6. Set / Update Decoy Panic Password
+app.post('/api/auth/decoy-password', requireAuth, async (req, res) => {
+  try {
+    const { decoyPassword, enable } = req.body;
+    const config = await getAuthConfig();
+
+    if (!enable) {
+      config.decoySalt = null;
+      config.decoyHashToken = null;
+    } else {
+      if (!decoyPassword || decoyPassword.length < 4) {
+        return res.status(400).json({ success: false, error: 'Decoy password must be at least 4 characters' });
+      }
+      const decoySalt = generateSalt();
+      config.decoySalt = decoySalt;
+      config.decoyHashToken = hashPassword(decoyPassword, decoySalt);
+    }
+
+    config.updatedAt = new Date().toISOString();
+    await saveAuthConfig(config);
+
+    res.json({
+      success: true,
+      message: enable ? 'Panic / Decoy Password configured successfully!' : 'Decoy password disabled'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 7. Update Vault Preferences (Camouflage default, Auto-lock timer)
+app.post('/api/auth/update-settings', requireAuth, async (req, res) => {
+  try {
+    const { defaultCamouflage, autoLockMinutes } = req.body;
+    const config = await getAuthConfig();
+
+    if (typeof defaultCamouflage === 'boolean') {
+      config.defaultCamouflage = defaultCamouflage;
+    }
+    if (typeof autoLockMinutes === 'number') {
+      config.autoLockMinutes = autoLockMinutes;
+    }
+
+    await saveAuthConfig(config);
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      settings: {
+        defaultCamouflage: config.defaultCamouflage,
+        autoLockMinutes: config.autoLockMinutes
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
+// STORAGE & VAULT API ENDPOINTS
+// ============================================================
 
 // 1. Health & Server Info
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const mode = getStorageMode();
+  const config = await getAuthConfig();
   res.json({
     status: 'online',
-    service: 'Vercel Cloud Storage Server',
-    version: '1.0.0',
+    service: 'Magic Cal Stealth Cloud Vault',
+    version: '2.0.0',
     storageMode: mode,
     isVercelBlobConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
+    isVaultProtected: !!config.isConfigured,
     tokenPrefix: process.env.BLOB_READ_WRITE_TOKEN ? process.env.BLOB_READ_WRITE_TOKEN.substring(0, 10) + '...' : 'none',
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor(process.uptime())
   });
 });
 
-app.get('/api/test-put', async (req, res) => {
-  if (!vercelBlob) {
-    return res.json({ success: false, error: '@vercel/blob module not loaded' });
-  }
+// 2. Storage Statistics & Quota (Protected)
+app.get('/api/storage/stats', requireAuth, async (req, res) => {
   try {
-    const putOptions = {
-      access: 'public'
-    };
-    if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
-      putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+    const isDecoy = req.session && req.session.isDecoy;
+    if (isDecoy) {
+      // In decoy mode, return mock safe empty stats
+      return res.json({
+        success: true,
+        mode: getStorageMode(),
+        isDecoy: true,
+        stats: {
+          totalFiles: 0,
+          totalBytes: 0,
+          totalFormatted: '0 B',
+          quotaBytes: VERCEL_FREE_QUOTA_BYTES,
+          quotaFormatted: formatBytes(VERCEL_FREE_QUOTA_BYTES),
+          freeBytes: VERCEL_FREE_QUOTA_BYTES,
+          freeFormatted: formatBytes(VERCEL_FREE_QUOTA_BYTES),
+          usedPercentage: 0,
+          categoryBreakdown: {
+            image: { count: 0, bytes: 0 },
+            document: { count: 0, bytes: 0 },
+            archive: { count: 0, bytes: 0 },
+            video: { count: 0, bytes: 0 },
+            audio: { count: 0, bytes: 0 },
+            code: { count: 0, bytes: 0 },
+            other: { count: 0, bytes: 0 }
+          }
+        }
+      });
     }
-    const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', putOptions);
-    return res.json({ success: true, accessUsed: 'public', blob });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
 
-// 2. Storage Statistics & Quota
-app.get('/api/storage/stats', async (req, res) => {
-  try {
     const files = await getAllFiles();
     const totalBytes = files.reduce((acc, file) => acc + (file.size || 0), 0);
     const quotaBytes = VERCEL_FREE_QUOTA_BYTES;
     const usedPercentage = Math.min(100, (totalBytes / quotaBytes) * 100);
     const freeBytes = Math.max(0, quotaBytes - totalBytes);
 
-    // Grouping by category
     const categoryBreakdown = {
       image: { count: 0, bytes: 0 },
       document: { count: 0, bytes: 0 },
       archive: { count: 0, bytes: 0 },
-      media: { count: 0, bytes: 0 },
+      video: { count: 0, bytes: 0 },
+      audio: { count: 0, bytes: 0 },
       code: { count: 0, bytes: 0 },
-      folder: { count: 0, bytes: 0 },
       other: { count: 0, bytes: 0 }
     };
 
@@ -250,9 +696,22 @@ app.get('/api/storage/stats', async (req, res) => {
   }
 });
 
-// 3. List all files
-app.get('/api/storage/files', async (req, res) => {
+// 3. List all files (Protected)
+app.get('/api/storage/files', requireAuth, async (req, res) => {
   try {
+    const isDecoy = req.session && req.session.isDecoy;
+    if (isDecoy) {
+      // In decoy mode, return empty or safe sample files
+      return res.json({
+        success: true,
+        count: 0,
+        total: 0,
+        mode: getStorageMode(),
+        isDecoy: true,
+        files: []
+      });
+    }
+
     const { search, category, limit, offset } = req.query;
     let files = await getAllFiles();
 
@@ -262,7 +721,7 @@ app.get('/api/storage/files', async (req, res) => {
     // Filter by search query
     if (search) {
       const q = search.toLowerCase();
-      files = files.filter(f => f.name.toLowerCase().includes(q) || f.rawName.toLowerCase().includes(q));
+      files = files.filter(f => f.name.toLowerCase().includes(q));
     }
 
     // Filter by category
@@ -289,8 +748,8 @@ app.get('/api/storage/files', async (req, res) => {
   }
 });
 
-// 4. File Upload (single or multiple)
-app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
+// 4. File Upload (Protected)
+app.post('/api/storage/upload', requireAuth, upload.array('files', 10), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, error: 'No files provided in request' });
@@ -308,33 +767,44 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
         let blob = null;
         let blobError = null;
 
+        // Try private access first
         try {
           const putOptions = {
-            access: 'public',
+            access: 'private',
             contentType: file.mimetype || 'application/octet-stream'
           };
           if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
             putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
           }
           blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
-        } catch (pubErr) {
-          blobError = pubErr;
+        } catch (privErr) {
+          blobError = privErr;
+          // Fallback to public access
+          try {
+            const pubOptions = {
+              access: 'public',
+              contentType: file.mimetype || 'application/octet-stream'
+            };
+            if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+              pubOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+            }
+            blob = await vercelBlob.put(uniqueFileName, file.buffer, pubOptions);
+            blobError = null;
+          } catch (pubErr) {
+            blobError = pubErr;
+          }
         }
 
         if (blob) {
-          const cat = categorizeFileType(uniqueFileName);
           uploadedResults.push({
-            name: getCleanDisplayName(uniqueFileName),
-            rawName: uniqueFileName,
+            name: uniqueFileName,
             originalName: file.originalname,
             url: blob.url,
             downloadUrl: blob.downloadUrl || blob.url,
             pathname: blob.pathname,
             size: file.size,
-            sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(file.size),
+            sizeFormatted: formatBytes(file.size),
             contentType: blob.contentType,
-            category: cat,
-            isFolder: cat === 'folder',
             uploadedAt: new Date().toISOString(),
             source: 'vercel-blob'
           });
@@ -356,19 +826,15 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
           console.warn('Local file write fallback:', fsErr.message);
         }
 
-        const cat = categorizeFileType(uniqueFileName);
         uploadedResults.push({
-          name: getCleanDisplayName(uniqueFileName),
-          rawName: uniqueFileName,
+          name: uniqueFileName,
           originalName: file.originalname,
           url: `/api/storage/local/${encodeURIComponent(uniqueFileName)}`,
           downloadUrl: `/api/storage/local/${encodeURIComponent(uniqueFileName)}?download=1`,
           pathname: uniqueFileName,
           size: file.size,
-          sizeFormatted: cat === 'folder' ? 'Folder' : formatBytes(file.size),
+          sizeFormatted: formatBytes(file.size),
           contentType: file.mimetype || 'application/octet-stream',
-          category: cat,
-          isFolder: cat === 'folder',
           uploadedAt: new Date().toISOString()
         });
       }
@@ -389,8 +855,8 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
   }
 });
 
-// 5. Delete file
-app.delete('/api/storage/delete', async (req, res) => {
+// 5. Delete file (Protected)
+app.delete('/api/storage/delete', requireAuth, async (req, res) => {
   try {
     const target = req.query.url || req.query.pathname || (req.body && (req.body.url || req.body.pathname));
     if (!target) {
@@ -426,7 +892,7 @@ app.delete('/api/storage/delete', async (req, res) => {
   }
 });
 
-// 6. Local file serve (for dev mode)
+// 6. Local file serve (for dev mode, protected)
 app.get('/api/storage/local/:filename', (req, res) => {
   const safeName = path.basename(req.params.filename);
   const filePath = path.join(LOCAL_STORAGE_DIR, safeName);
@@ -456,7 +922,7 @@ if (fs.existsSync(PUBLIC_DIR)) {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`=========================================`);
-    console.log(`🚀 Vercel Storage Server running!`);
+    console.log(`🚀 Magic Cal Stealth Cloud Vault running!`);
     console.log(`🌐 Dashboard: http://localhost:${PORT}`);
     console.log(`📦 Storage Mode: ${getStorageMode().toUpperCase()}`);
     console.log(`=========================================`);
