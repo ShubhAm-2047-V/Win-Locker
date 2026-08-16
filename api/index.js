@@ -279,6 +279,7 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
 
       if (mode === 'vercel-blob') {
         const putOptions = {
+          access: 'public',
           contentType: file.mimetype || 'application/octet-stream'
         };
         if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
@@ -302,31 +303,11 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
           uploadedToBlob = true;
         } catch (putErr) {
           console.error('Vercel Blob upload failed:', putErr);
-          // Try with access public as fallback if store requires it
-          try {
-            putOptions.access = 'public';
-            const blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
-            uploadedResults.push({
-              name: uniqueFileName,
-              originalName: file.originalname,
-              url: blob.url,
-              downloadUrl: blob.downloadUrl || blob.url,
-              pathname: blob.pathname,
-              size: file.size,
-              sizeFormatted: formatBytes(file.size),
-              contentType: blob.contentType,
-              uploadedAt: new Date().toISOString(),
-              source: 'vercel-blob'
+          if (isServerless) {
+            return res.status(500).json({
+              success: false,
+              error: `Vercel Blob upload failed: ${putErr.message}`
             });
-            uploadedToBlob = true;
-          } catch (retryErr) {
-            console.error('Retry put failed:', retryErr);
-            if (isServerless) {
-              return res.status(500).json({
-                success: false,
-                error: `Vercel Blob upload failed: ${putErr.message}`
-              });
-            }
           }
         }
       }
