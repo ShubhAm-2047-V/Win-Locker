@@ -7,7 +7,7 @@ let currentTagFilter = null;
 let searchQuery = '';
 let deleteOriginalFiles = false;
 let failedAttempts = 0;
-let isCamouflageEnabled = false;
+let isCamouflageEnabled = true;
 
 // DOM Elements
 const authScreen = document.getElementById('authScreen');
@@ -919,6 +919,9 @@ if (btnClearIntruderLogs) {
 
 // Camouflage Calculator Interactive Logic
 let calcDisplay = '0';
+let calcPrevValue = null;
+let calcOperator = null;
+let calcWaitingForSecondOperand = false;
 let equalsHoldTimer = null;
 let isEqualsLongPress = false;
 
@@ -943,6 +946,14 @@ function openPasswordScreen() {
   });
 }
 
+function calculateBasic(first, second, op) {
+  if (op === '+') return first + second;
+  if (op === '-') return first - second;
+  if (op === '*') return first * second;
+  if (op === '/') return second !== 0 ? first / second : 0;
+  return second;
+}
+
 async function calcAction(val) {
   // If triggered by long-press, skip normal evaluation
   if (isEqualsLongPress) {
@@ -951,40 +962,94 @@ async function calcAction(val) {
   }
 
   const screen = document.getElementById('calcScreen');
+  
   if (val === 'C') {
     calcDisplay = '0';
-  } else if (val === '=') {
-    const rawExpr = calcDisplay.replace(/\s+/g, '');
-    // Check for secret unlock equation 2007+4 (or result 2011 if already calculated)
-    if (rawExpr === '2007+4' || rawExpr === '2011') {
-      calcDisplay = '0';
-      screen.textContent = '0';
-      isCamouflageEnabled = false;
-      calcCamouflageView.style.display = 'none';
+    calcPrevValue = null;
+    calcOperator = null;
+    calcWaitingForSecondOperand = false;
+    screen.textContent = '0';
+    return;
+  }
 
-      const isSetup = await ipcRenderer.invoke('auth:isSetup');
-      if (isSetup) {
-        authScreen.style.display = 'none';
-        appScreen.style.display = 'flex';
-        loadVaultContents();
-        showToast('Secret key accepted! Vault unlocked.', 'success');
-      } else {
-        authScreen.style.display = 'flex';
-        setupCard.style.display = 'block';
-        loginCard.style.display = 'none';
-        showToast('Welcome to Magic Cal! Please set up your vault.', 'info');
-      }
+  if (val === '+/-') {
+    calcDisplay = String(-parseFloat(calcDisplay || '0'));
+    screen.textContent = calcDisplay;
+    return;
+  }
+
+  if (val === '%') {
+    calcDisplay = String(parseFloat(calcDisplay || '0') / 100);
+    screen.textContent = calcDisplay;
+    return;
+  }
+
+  if (['+', '-', '*', '/'].includes(val)) {
+    const inputValue = parseFloat(calcDisplay);
+    if (calcOperator && calcWaitingForSecondOperand) {
+      calcOperator = val;
       return;
     }
-
-    try {
-      calcDisplay = String(eval(calcDisplay));
-    } catch (e) {
-      calcDisplay = 'Error';
+    if (calcPrevValue === null && !isNaN(inputValue)) {
+      calcPrevValue = inputValue;
+    } else if (calcOperator) {
+      const result = calculateBasic(calcPrevValue, inputValue, calcOperator);
+      calcDisplay = `${parseFloat(result.toFixed(7))}`;
+      calcPrevValue = result;
+      screen.textContent = calcDisplay;
     }
+    calcWaitingForSecondOperand = true;
+    calcOperator = val;
+    return;
+  }
+
+  if (val === '=') {
+    // 1. Secret Unlock Trigger: Try unlocking with entered password/PIN or key equation
+    const candidatePass = calcDisplay !== '0' ? calcDisplay : '';
+    if (candidatePass) {
+      try {
+        const unlockResult = await ipcRenderer.invoke('auth:unlock', candidatePass);
+        if (unlockResult) {
+          calcDisplay = '0';
+          screen.textContent = '0';
+          isCamouflageEnabled = false;
+          calcCamouflageView.style.display = 'none';
+          authScreen.style.display = 'none';
+          appScreen.style.display = 'flex';
+          loadVaultContents();
+          showToast(unlockResult.isDecoy ? 'Decoy Vault Unlocked' : 'Vault Unlocked Successfully!', 'success');
+          return;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Perform normal arithmetic evaluation
+    const inputValue = parseFloat(calcDisplay);
+    if (calcOperator && calcPrevValue !== null) {
+      const result = calculateBasic(calcPrevValue, inputValue, calcOperator);
+      calcDisplay = `${parseFloat(result.toFixed(7))}`;
+      calcPrevValue = null;
+      calcOperator = null;
+      calcWaitingForSecondOperand = false;
+      screen.textContent = calcDisplay;
+    }
+    return;
+  }
+
+  if (val === '.') {
+    if (!calcDisplay.includes('.')) {
+      calcDisplay += '.';
+      screen.textContent = calcDisplay;
+    }
+    return;
+  }
+
+  // Digits 0-9
+  if (calcWaitingForSecondOperand) {
+    calcDisplay = val;
+    calcWaitingForSecondOperand = false;
   } else {
-    if (calcDisplay === '0' || calcDisplay === 'Error') calcDisplay = val;
-    else calcDisplay += val;
+    calcDisplay = calcDisplay === '0' || calcDisplay === 'Error' ? val : calcDisplay + val;
   }
   screen.textContent = calcDisplay;
 }
@@ -1018,17 +1083,25 @@ if (btnCalcEquals) {
   btnCalcEquals.addEventListener('pointerleave', cancelHold);
 }
 
-// Keyboard support: Hold '=' or 'Enter' for 3 seconds
+// Keyboard support: Numbers, operators, and Hold '=' or 'Enter' for 3 seconds
 let keyHoldTimer = null;
 document.addEventListener('keydown', (e) => {
   if (calcCamouflageView && calcCamouflageView.style.display !== 'none') {
-    if (e.key === '=' || e.key === 'Enter') {
+    if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+      calcAction(e.key);
+    } else if (['+', '-', '*', '/'].includes(e.key)) {
+      calcAction(e.key);
+    } else if (e.key === 'Enter' || e.key === '=') {
       if (!keyHoldTimer && !e.repeat) {
         keyHoldTimer = setTimeout(() => {
           isEqualsLongPress = true;
           openPasswordScreen();
         }, 3000);
       }
+      e.preventDefault();
+      calcAction('=');
+    } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
+      calcAction('C');
     }
   }
 });
@@ -1039,6 +1112,17 @@ document.addEventListener('keyup', (e) => {
     keyHoldTimer = null;
   }
 });
+
+// Switch from Login Card back to Calculator Camouflage
+const btnSwitchToCalc = document.getElementById('btnSwitchToCalc');
+if (btnSwitchToCalc) {
+  btnSwitchToCalc.addEventListener('click', () => {
+    isCamouflageEnabled = true;
+    authScreen.style.display = 'none';
+    calcCamouflageView.style.display = 'flex';
+    calcAction('C');
+  });
+}
 
 const togglePasswordVisibility = document.getElementById('togglePasswordVisibility');
 if (togglePasswordVisibility) {
@@ -1123,6 +1207,26 @@ window.addEventListener('keydown', async (e) => {
       ipcRenderer.send('app:lock-and-close');
     } catch (err) {}
   }
+});
+
+if (btnLockApp) {
+  btnLockApp.addEventListener('click', async () => {
+    await ipcRenderer.invoke('auth:lock');
+    appScreen.style.display = 'none';
+    authScreen.style.display = 'none';
+    isCamouflageEnabled = true;
+    calcCamouflageView.style.display = 'flex';
+    calcAction('C');
+    showToast('Vault Locked', 'info');
+  });
+}
+
+ipcRenderer.on('app:locked', () => {
+  appScreen.style.display = 'none';
+  authScreen.style.display = 'none';
+  isCamouflageEnabled = true;
+  calcCamouflageView.style.display = 'flex';
+  calcAction('C');
 });
 
 // Vault Settings Modal Controls

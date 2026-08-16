@@ -16,25 +16,38 @@
   <!-- CAMOUFLAGE MODE: FAKE CALCULATOR                             -->
   <!-- ============================================================ -->
   <div id="calcCamouflageView" class="auth-container" style="display: none;">
-    <div class="calc-container">
+    <div class="calc-card">
+      <div class="calc-brand-header">
+        <div class="calc-solar-cell"></div>
+        <div class="calc-brand-title">MAGIC CAL FX-991</div>
+      </div>
+      
       <div id="calcScreen" class="calc-screen">0</div>
+      
       <div class="calc-grid">
-        <button class="calc-btn operator" onclick="calcAction('C')">C</button>
-        <button class="calc-btn operator" onclick="calcAction('/')">/</button>
-        <button class="calc-btn operator" onclick="calcAction('*')">*</button>
-        <button class="calc-btn operator" onclick="calcAction('-')">-</button>
+        <button class="calc-btn function" onclick="calcAction('C')">C</button>
+        <button class="calc-btn function" onclick="calcAction('+/-')">±</button>
+        <button class="calc-btn function" onclick="calcAction('%')">%</button>
+        <button class="calc-btn operator accent" onclick="calcAction('/')">÷</button>
+        
         <button class="calc-btn" onclick="calcAction('7')">7</button>
         <button class="calc-btn" onclick="calcAction('8')">8</button>
         <button class="calc-btn" onclick="calcAction('9')">9</button>
-        <button class="calc-btn operator" onclick="calcAction('+')">+</button>
+        <button class="calc-btn operator accent" onclick="calcAction('*')">×</button>
+        
         <button class="calc-btn" onclick="calcAction('4')">4</button>
         <button class="calc-btn" onclick="calcAction('5')">5</button>
         <button class="calc-btn" onclick="calcAction('6')">6</button>
-        <button class="calc-btn operator" id="calcSecretUnlock" onclick="calcAction('=')">=</button>
+        <button class="calc-btn operator accent" onclick="calcAction('-')">−</button>
+        
         <button class="calc-btn" onclick="calcAction('1')">1</button>
         <button class="calc-btn" onclick="calcAction('2')">2</button>
         <button class="calc-btn" onclick="calcAction('3')">3</button>
-        <button class="calc-btn" onclick="calcAction('0')">0</button>
+        <button class="calc-btn operator accent" onclick="calcAction('+')">+</button>
+        
+        <button class="calc-btn zero" onclick="calcAction('0')">0</button>
+        <button class="calc-btn" onclick="calcAction('.')">.</button>
+        <button class="calc-btn operator equals" id="calcSecretUnlock" onclick="calcAction('=')">=</button>
       </div>
     </div>
   </div>
@@ -97,7 +110,10 @@
 
       <button id="btnUnlockVault" class="btn-primary" style="margin-bottom:14px;">Unlock Vault</button>
 
-      <div id="linkForgotPass" class="auth-footer-link">Forgot Master Password? Use Recovery Key</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+        <span id="linkForgotPass" class="auth-footer-link" style="margin-top:0;">Forgot Password?</span>
+        <span id="btnSwitchToCalc" class="auth-footer-link" style="margin-top:0; color:var(--text-dim);">Calculator Camouflage</span>
+      </div>
     </div>
 
     <!-- Forgot Password / Recovery Key Card -->
