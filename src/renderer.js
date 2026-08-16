@@ -919,7 +919,37 @@ if (btnClearIntruderLogs) {
 
 // Camouflage Calculator Interactive Logic
 let calcDisplay = '0';
+let equalsHoldTimer = null;
+let isEqualsLongPress = false;
+
+function openPasswordScreen() {
+  isCamouflageEnabled = false;
+  calcCamouflageView.style.display = 'none';
+  authScreen.style.display = 'flex';
+  
+  ipcRenderer.invoke('auth:isSetup').then(isSetup => {
+    if (!isSetup) {
+      setupCard.style.display = 'block';
+      loginCard.style.display = 'none';
+      if (setupPasswordInput) setupPasswordInput.focus();
+    } else {
+      setupCard.style.display = 'none';
+      loginCard.style.display = 'block';
+      if (loginPasswordInput) {
+        loginPasswordInput.value = '';
+        loginPasswordInput.focus();
+      }
+    }
+  });
+}
+
 async function calcAction(val) {
+  // If triggered by long-press, skip normal evaluation
+  if (isEqualsLongPress) {
+    isEqualsLongPress = false;
+    return;
+  }
+
   const screen = document.getElementById('calcScreen');
   if (val === 'C') {
     calcDisplay = '0';
@@ -937,7 +967,7 @@ async function calcAction(val) {
         authScreen.style.display = 'none';
         appScreen.style.display = 'flex';
         loadVaultContents();
-        showToast('Secret key 2007+4 accepted! Vault unlocked.', 'success');
+        showToast('Secret key accepted! Vault unlocked.', 'success');
       } else {
         authScreen.style.display = 'flex';
         setupCard.style.display = 'block';
@@ -960,11 +990,54 @@ async function calcAction(val) {
 }
 window.calcAction = calcAction;
 
-document.getElementById('btnExitCalculator').addEventListener('click', () => {
-  isCamouflageEnabled = false;
-  calcCamouflageView.style.display = 'none';
-  authScreen.style.display = 'flex';
-  loginCard.style.display = 'block';
+// Hold '=' for 3 seconds to open the Password Screen
+const btnCalcEquals = document.getElementById('calcSecretUnlock');
+if (btnCalcEquals) {
+  const startHold = () => {
+    isEqualsLongPress = false;
+    clearTimeout(equalsHoldTimer);
+    equalsHoldTimer = setTimeout(() => {
+      isEqualsLongPress = true;
+      openPasswordScreen();
+    }, 3000);
+  };
+
+  const cancelHold = () => {
+    clearTimeout(equalsHoldTimer);
+  };
+
+  btnCalcEquals.addEventListener('mousedown', startHold);
+  btnCalcEquals.addEventListener('touchstart', startHold, { passive: true });
+  btnCalcEquals.addEventListener('pointerdown', startHold);
+
+  btnCalcEquals.addEventListener('mouseup', cancelHold);
+  btnCalcEquals.addEventListener('mouseleave', cancelHold);
+  btnCalcEquals.addEventListener('touchend', cancelHold);
+  btnCalcEquals.addEventListener('touchcancel', cancelHold);
+  btnCalcEquals.addEventListener('pointerup', cancelHold);
+  btnCalcEquals.addEventListener('pointerleave', cancelHold);
+}
+
+// Keyboard support: Hold '=' or 'Enter' for 3 seconds
+let keyHoldTimer = null;
+document.addEventListener('keydown', (e) => {
+  if (calcCamouflageView && calcCamouflageView.style.display !== 'none') {
+    if (e.key === '=' || e.key === 'Enter') {
+      if (!keyHoldTimer && !e.repeat) {
+        keyHoldTimer = setTimeout(() => {
+          isEqualsLongPress = true;
+          openPasswordScreen();
+        }, 3000);
+      }
+    }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === '=' || e.key === 'Enter') {
+    clearTimeout(keyHoldTimer);
+    keyHoldTimer = null;
+  }
 });
 
 const togglePasswordVisibility = document.getElementById('togglePasswordVisibility');

@@ -55,7 +55,6 @@ const loginPasswordInput = document.getElementById('loginPasswordInput');
 const btnUnlockVault = document.getElementById('btnUnlockVault');
 const linkForgotPass = document.getElementById('linkForgotPass');
 const btnSwitchToCalc = document.getElementById('btnSwitchToCalc');
-const btnExitCalculator = document.getElementById('btnExitCalculator');
 
 // Inputs & Buttons - Reset
 const resetForm = document.getElementById('resetForm');
@@ -235,6 +234,8 @@ let calcPrevValue = null;
 let calcOperator = null;
 let calcWaitingForSecondOperand = false;
 let calcKeyLog = ''; // Keeps track of recent keypresses to match master password
+let equalsHoldTimer = null;
+let isEqualsLongPress = false;
 
 const calcScreen = document.getElementById('calcScreen');
 
@@ -253,7 +254,21 @@ function resetCalc() {
   updateCalcScreen();
 }
 
+function openPasswordPageFromCalc() {
+  if (!state.isConfigured) {
+    showView('setup');
+  } else {
+    showView('login');
+  }
+}
+
 window.calcAction = async function(val) {
+  // If triggered by long-press on '=', skip normal calculation
+  if (isEqualsLongPress) {
+    isEqualsLongPress = false;
+    return;
+  }
+
   calcKeyLog += val;
   if (calcKeyLog.length > 50) calcKeyLog = calcKeyLog.slice(-50);
 
@@ -354,7 +369,36 @@ function calculate(first, second, op) {
   return second;
 }
 
-// Global Keyboard shortcuts for Calculator mode & Unlock
+// Hold '=' button for 3 seconds to open Password Page
+const btnCalcSecretEquals = document.getElementById('calcSecretUnlock');
+if (btnCalcSecretEquals) {
+  const startEqualsHold = () => {
+    isEqualsLongPress = false;
+    clearTimeout(equalsHoldTimer);
+    equalsHoldTimer = setTimeout(() => {
+      isEqualsLongPress = true;
+      openPasswordPageFromCalc();
+    }, 3000);
+  };
+
+  const cancelEqualsHold = () => {
+    clearTimeout(equalsHoldTimer);
+  };
+
+  btnCalcSecretEquals.addEventListener('mousedown', startEqualsHold);
+  btnCalcSecretEquals.addEventListener('touchstart', startEqualsHold, { passive: true });
+  btnCalcSecretEquals.addEventListener('pointerdown', startEqualsHold);
+
+  btnCalcSecretEquals.addEventListener('mouseup', cancelEqualsHold);
+  btnCalcSecretEquals.addEventListener('mouseleave', cancelEqualsHold);
+  btnCalcSecretEquals.addEventListener('touchend', cancelEqualsHold);
+  btnCalcSecretEquals.addEventListener('touchcancel', cancelEqualsHold);
+  btnCalcSecretEquals.addEventListener('pointerup', cancelEqualsHold);
+  btnCalcSecretEquals.addEventListener('pointerleave', cancelEqualsHold);
+}
+
+// Global Keyboard shortcuts for Calculator mode & 3-second hold on '=' / 'Enter'
+let keyHoldTimer = null;
 document.addEventListener('keydown', (e) => {
   if (calcCamouflageView.style.display !== 'none') {
     if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
@@ -362,11 +406,24 @@ document.addEventListener('keydown', (e) => {
     } else if (['+', '-', '*', '/'].includes(e.key)) {
       calcAction(e.key);
     } else if (e.key === 'Enter' || e.key === '=') {
+      if (!keyHoldTimer && !e.repeat) {
+        keyHoldTimer = setTimeout(() => {
+          isEqualsLongPress = true;
+          openPasswordPageFromCalc();
+        }, 3000);
+      }
       e.preventDefault();
       calcAction('=');
     } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
       calcAction('C');
     }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === '=' || e.key === 'Enter') {
+    clearTimeout(keyHoldTimer);
+    keyHoldTimer = null;
   }
 });
 
@@ -423,13 +480,6 @@ async function initApp() {
 // ============================================================
 // AUTHENTICATION EVENT LISTENERS
 // ============================================================
-
-// Switch from Calculator to Master Password Login
-if (btnExitCalculator) {
-  btnExitCalculator.addEventListener('click', () => {
-    showView('login');
-  });
-}
 
 // Switch from Login to Calculator Camouflage
 if (btnSwitchToCalc) {
