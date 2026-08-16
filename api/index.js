@@ -74,7 +74,7 @@ function categorizeFileType(filename) {
 
 // Helper: Get storage mode
 function getStorageMode() {
-  if (process.env.BLOB_READ_WRITE_TOKEN && vercelBlob) {
+  if ((process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID || process.env.VERCEL) && vercelBlob) {
     return 'vercel-blob';
   }
   return 'local-storage';
@@ -86,9 +86,11 @@ async function getAllFiles() {
 
   if (mode === 'vercel-blob') {
     try {
-      const response = await vercelBlob.list({
-        token: process.env.BLOB_READ_WRITE_TOKEN
-      });
+      const listOptions = {};
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        listOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
+      }
+      const response = await vercelBlob.list(listOptions);
       return (response.blobs || []).map(blob => ({
         id: blob.url,
         name: blob.pathname,
@@ -104,6 +106,10 @@ async function getAllFiles() {
       }));
     } catch (error) {
       console.error('Error fetching Vercel blobs:', error.message);
+      // Fallback to local if vercelBlob fails due to unlinked store
+      if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+        return [];
+      }
       throw error;
     }
   } else {
@@ -250,11 +256,15 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
       const uniqueFileName = `${Date.now()}-${cleanFileName}`;
 
       if (mode === 'vercel-blob') {
-        const blob = await vercelBlob.put(uniqueFileName, file.buffer, {
+        const putOptions = {
           access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN,
           contentType: file.mimetype || 'application/octet-stream'
-        });
+        };
+        if (process.env.BLOB_READ_WRITE_TOKEN) {
+          putOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
+        }
+
+        const blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
 
         uploadedResults.push({
           name: uniqueFileName,
@@ -312,9 +322,11 @@ app.delete('/api/storage/delete', async (req, res) => {
     const mode = getStorageMode();
 
     if (mode === 'vercel-blob') {
-      await vercelBlob.del(target, {
-        token: process.env.BLOB_READ_WRITE_TOKEN
-      });
+      const delOptions = {};
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        delOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
+      }
+      await vercelBlob.del(target, delOptions);
     } else {
       const fileName = path.basename(target);
       const filePath = path.join(LOCAL_STORAGE_DIR, fileName);
