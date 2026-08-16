@@ -445,8 +445,14 @@ function renderGrid(folders, items) {
         tagsHtml = `<div class="item-tag-list">${item.tags.map(t => `<span class="tag-chip">${t}</span>`).join('')}</div>`;
       }
 
+      let cloudBadgeHtml = '';
+      if (item.cloudUrl || item.isSelectiveBackup) {
+        cloudBadgeHtml = `<div class="cloud-synced-pill" title="Saved to Vercel Cloud Storage&#10;Synced: ${item.cloudSyncedAt ? new Date(item.cloudSyncedAt).toLocaleString() : 'Yes'}">☁️ Cloud</div>`;
+      }
+
       card.innerHTML = `
         ${badgeHtml}
+        ${cloudBadgeHtml}
         <button class="item-menu-btn" title="Options">
           <svg style="width: 14px; height: 14px; fill: var(--text-muted);" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
         </button>
@@ -684,8 +690,8 @@ async function showContextMenu(item, e) {
     <div class="context-menu-divider"></div>
 
     <div class="context-menu-item" id="ctxSync">
-      <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-      <span>${item.isSelectiveBackup ? 'Remove from Cloud Sync' : 'Sync to Cloud / Drive'}</span>
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+      <span>${item.cloudUrl ? '☁️ Re-Sync to Vercel Cloud' : '☁️ Sync to Vercel Cloud'}</span>
     </div>
 
     <div class="context-menu-item" id="ctxTags">
@@ -746,13 +752,19 @@ async function showContextMenu(item, e) {
 
   document.getElementById('ctxSync').onclick = async () => {
     glassContextMenu.style.display = 'none';
-    const newVal = !item.isSelectiveBackup;
-    await ipcRenderer.invoke('vault:updateMetadata', {
-      itemId: item.id,
-      metadata: { isSelectiveBackup: newVal }
-    });
-    showToast(newVal ? `Marked ${item.name} for Cloud Sync` : `Removed ${item.name} from Cloud Sync`, 'success');
-    loadVaultContents();
+    showToast(`☁️ Syncing "${item.name}" to Vercel Cloud Storage...`, 'info');
+    try {
+      const result = await ipcRenderer.invoke('vault:syncItemToCloud', { itemId: item.id });
+      if (result && result.success) {
+        showToast(`✅ "${item.name}" saved to Vercel Cloud Storage!`, 'success');
+        loadVaultContents();
+      } else {
+        showToast(`❌ Cloud sync failed: ${(result && result.error) || 'Upload failed'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Cloud sync error:', err);
+      showToast(`❌ Cloud sync error: ${err.message}`, 'error');
+    }
   };
 
   document.getElementById('ctxTags').onclick = async () => {
@@ -1025,6 +1037,143 @@ window.addEventListener('keydown', async (e) => {
     } catch (err) {}
   }
 });
+
+// Vault Settings Modal Controls
+const settingsModal = document.getElementById('settingsModal');
+const navSettings = document.getElementById('navSettings');
+const btnCloseSettingsModal = document.getElementById('btnCloseSettingsModal');
+const cloudServerUrlInput = document.getElementById('cloudServerUrlInput');
+const btnTestCloudConn = document.getElementById('btnTestCloudConn');
+const btnSyncAllToCloud = document.getElementById('btnSyncAllToCloud');
+const btnSyncSelectiveNow = document.getElementById('btnSyncSelectiveNow');
+const btnSetupDecoy = document.getElementById('btnSetupDecoy');
+const decoyPassInput = document.getElementById('decoyPassInput');
+const btnExportBackupArchive = document.getElementById('btnExportBackupArchive');
+const btnImportBackupArchive = document.getElementById('btnImportBackupArchive');
+
+if (navSettings) {
+  navSettings.addEventListener('click', async () => {
+    try {
+      const cloudSettings = await ipcRenderer.invoke('vault:getCloudSettings');
+      if (cloudServerUrlInput) {
+        cloudServerUrlInput.value = (cloudSettings && cloudSettings.serverUrl) || 'https://win-locker.vercel.app';
+      }
+    } catch (e) {}
+    settingsModal.classList.add('active');
+  });
+}
+
+if (btnCloseSettingsModal) {
+  btnCloseSettingsModal.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+  });
+}
+
+if (btnTestCloudConn) {
+  btnTestCloudConn.addEventListener('click', async () => {
+    const url = cloudServerUrlInput.value.trim() || 'https://win-locker.vercel.app';
+    showToast('Testing connection to Vercel Cloud...', 'info');
+    try {
+      await ipcRenderer.invoke('vault:setCloudSettings', { serverUrl: url });
+      const testRes = await ipcRenderer.invoke('vault:testCloudConnection', url);
+      if (testRes && testRes.success) {
+        showToast('✅ Vercel Cloud Server Connected Successfully!', 'success');
+      } else {
+        showToast(`❌ Connection Failed: ${(testRes && testRes.error) || 'Server unreachable'}`, 'error');
+      }
+    } catch (err) {
+      showToast(`❌ Connection Error: ${err.message}`, 'error');
+    }
+  });
+}
+
+if (btnSyncAllToCloud) {
+  btnSyncAllToCloud.addEventListener('click', async () => {
+    const url = cloudServerUrlInput.value.trim() || 'https://win-locker.vercel.app';
+    showToast('☁️ Uploading all vault files to Vercel Cloud Storage...', 'info');
+    try {
+      await ipcRenderer.invoke('vault:setCloudSettings', { serverUrl: url });
+      const res = await ipcRenderer.invoke('vault:syncAllToCloud', { serverUrl: url });
+      if (res && res.success) {
+        showToast(`✅ Synced ${res.count} file(s) to Vercel Cloud Storage!`, 'success');
+        loadVaultContents();
+      } else {
+        showToast(`❌ Cloud Sync failed: ${(res && res.error) || 'Upload error'}`, 'error');
+      }
+    } catch (err) {
+      showToast(`❌ Cloud Sync error: ${err.message}`, 'error');
+    }
+  });
+}
+
+if (btnSyncSelectiveNow) {
+  btnSyncSelectiveNow.addEventListener('click', async () => {
+    const targetDir = await ipcRenderer.invoke('dialog:openDirectory');
+    if (targetDir) {
+      showToast('Exporting local backup sync...', 'info');
+      try {
+        const count = await ipcRenderer.invoke('vault:syncSelective', targetDir);
+        showToast(`✅ Synced ${count || 0} files to ${targetDir}`, 'success');
+      } catch (err) {
+        showToast(`❌ Local sync failed: ${err.message}`, 'error');
+      }
+    }
+  });
+}
+
+if (btnSetupDecoy) {
+  btnSetupDecoy.addEventListener('click', async () => {
+    const pass = decoyPassInput.value;
+    if (!pass) {
+      showToast('Please enter a decoy/panic password', 'error');
+      return;
+    }
+    try {
+      await ipcRenderer.invoke('auth:setupDecoy', pass);
+      decoyPassInput.value = '';
+      showToast('✅ Panic Password set successfully!', 'success');
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+  });
+}
+
+if (btnExportBackupArchive) {
+  btnExportBackupArchive.addEventListener('click', async () => {
+    const targetPath = await ipcRenderer.invoke('dialog:saveBackupFile');
+    if (targetPath) {
+      const pass = prompt('Enter a password to encrypt this .winlocker backup:');
+      if (pass) {
+        showToast('Creating backup archive...', 'info');
+        try {
+          await ipcRenderer.invoke('vault:exportBackup', { targetPath, password: pass });
+          showToast('✅ Backup created successfully!', 'success');
+        } catch (err) {
+          showToast('Export error: ' + err.message, 'error');
+        }
+      }
+    }
+  });
+}
+
+if (btnImportBackupArchive) {
+  btnImportBackupArchive.addEventListener('click', async () => {
+    const backupPath = await ipcRenderer.invoke('dialog:openBackupFile');
+    if (backupPath) {
+      const pass = prompt('Enter the password for this .winlocker backup:');
+      if (pass) {
+        showToast('Restoring backup archive...', 'info');
+        try {
+          await ipcRenderer.invoke('vault:importBackup', { backupPath, password: pass });
+          showToast('✅ Vault restored from backup!', 'success');
+          loadVaultContents();
+        } catch (err) {
+          showToast('Import error: ' + err.message, 'error');
+        }
+      }
+    }
+  });
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   initAuth();

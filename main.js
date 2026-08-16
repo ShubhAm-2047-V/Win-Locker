@@ -387,6 +387,35 @@ ipcMain.handle('vault:syncSelective', async (event, targetDir) => {
   return await vault.syncSelectiveBackups(targetDir);
 });
 
+// Vercel Cloud Storage Synchronization Handlers
+ipcMain.handle('vault:syncItemToCloud', async (event, { itemId, serverUrl }) => {
+  return await vault.syncItemToCloud(itemId, serverUrl);
+});
+
+ipcMain.handle('vault:syncAllToCloud', async (event, { serverUrl }) => {
+  return await vault.syncAllToCloud(serverUrl);
+});
+
+ipcMain.handle('vault:getCloudSettings', async () => {
+  return vault.getCloudSettings();
+});
+
+ipcMain.handle('vault:setCloudSettings', async (event, settings) => {
+  return await vault.setCloudSettings(settings);
+});
+
+ipcMain.handle('vault:testCloudConnection', async (event, serverUrl) => {
+  try {
+    const base = (serverUrl || 'https://win-locker.vercel.app').replace(/\/+$/, '');
+    const res = await fetch(`${base}/api/health`);
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 // File Dialog Pickers
 ipcMain.handle('dialog:openFiles', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {

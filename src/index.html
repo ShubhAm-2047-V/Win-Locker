@@ -300,11 +300,18 @@
 
         <hr class="settings-divider">
 
-        <!-- Selective Backup Sync -->
+        <!-- Vercel Cloud Storage Sync -->
         <div>
-          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">Selective Cloud / Local Sync</h4>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Selectively sync marked vault files to an external folder (e.g. Google Drive, OneDrive, or USB).</p>
-          <button id="btnSyncSelectiveNow" class="btn-secondary" style="width:100%;">Sync Selective Files Now</button>
+          <h4 style="color: #0284c7; font-weight: 800; font-size: 15px; margin-bottom: 6px;">☁️ Vercel Cloud Storage Server</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Connect with your deployed Vercel cloud server to sync and view files online in real-time.</p>
+          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="text" id="cloudServerUrlInput" class="input-field" style="padding: 10px 14px; flex: 1; font-size: 13px;" placeholder="https://win-locker.vercel.app">
+            <button id="btnTestCloudConn" class="btn-secondary" style="white-space: nowrap; padding: 10px 16px; font-size: 13px;">Test Connection</button>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btnSyncAllToCloud" class="btn-primary" style="flex: 1; padding: 10px 16px; font-size: 13px;">Sync All Files to Cloud</button>
+            <button id="btnSyncSelectiveNow" class="btn-secondary" style="flex: 1; padding: 10px 16px; font-size: 13px;">Export Local Sync</button>
+          </div>
         </div>
 
         <hr class="settings-divider">
