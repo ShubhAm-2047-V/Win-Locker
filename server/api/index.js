@@ -163,15 +163,27 @@ app.get('/api/test-put', async (req, res) => {
   }
   try {
     const putOptions = {
-      access: 'public'
+      access: 'private'
     };
     if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
       putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
     }
     const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', putOptions);
-    return res.json({ success: true, blob });
+    return res.json({ success: true, accessUsed: 'private', blob });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message, stack: err.stack, name: err.name });
+    // Try public fallback
+    try {
+      const pubOptions = {
+        access: 'public'
+      };
+      if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+        pubOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+      }
+      const blob = await vercelBlob.put('test-sample.txt', 'hello vercel blob test content', pubOptions);
+      return res.json({ success: true, accessUsed: 'public', blob });
+    } catch (pubErr) {
+      return res.status(500).json({ success: false, privateError: err.message, publicError: pubErr.message });
+    }
   }
 });
 
@@ -280,16 +292,38 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
       let uploadedToBlob = false;
 
       if (mode === 'vercel-blob') {
-        const putOptions = {
-          access: 'public',
-          contentType: file.mimetype || 'application/octet-stream'
-        };
-        if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
-          putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+        let blob = null;
+        let blobError = null;
+
+        // Try private access first (matches private stores)
+        try {
+          const putOptions = {
+            access: 'private',
+            contentType: file.mimetype || 'application/octet-stream'
+          };
+          if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+            putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+          }
+          blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
+        } catch (privErr) {
+          blobError = privErr;
+          // Fallback to public access (matches public stores)
+          try {
+            const pubOptions = {
+              access: 'public',
+              contentType: file.mimetype || 'application/octet-stream'
+            };
+            if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+              pubOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+            }
+            blob = await vercelBlob.put(uniqueFileName, file.buffer, pubOptions);
+            blobError = null;
+          } catch (pubErr) {
+            blobError = pubErr;
+          }
         }
 
-        try {
-          const blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
+        if (blob) {
           uploadedResults.push({
             name: uniqueFileName,
             originalName: file.originalname,
@@ -303,14 +337,11 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
             source: 'vercel-blob'
           });
           uploadedToBlob = true;
-        } catch (putErr) {
-          console.error('Vercel Blob upload failed:', putErr);
-          if (isServerless) {
-            return res.status(500).json({
-              success: false,
-              error: `Vercel Blob upload failed: ${putErr.message}`
-            });
-          }
+        } else if (isServerless && blobError) {
+          return res.status(500).json({
+            success: false,
+            error: `Vercel Blob upload failed: ${blobError.message}`
+          });
         }
       }
 
