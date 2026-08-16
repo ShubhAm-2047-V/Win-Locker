@@ -434,6 +434,12 @@ function renderGrid(folders, items) {
         showContextMenu(folder, e);
       });
 
+      card.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showContextMenu(folder, e);
+      });
+
       itemsGrid.appendChild(card);
     });
   }
