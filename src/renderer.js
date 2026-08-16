@@ -69,6 +69,9 @@ const btnSetupDecoy = document.getElementById('btnSetupDecoy');
 const btnExportBackupArchive = document.getElementById('btnExportBackupArchive');
 const btnImportBackupArchive = document.getElementById('btnImportBackupArchive');
 const btnSyncSelectiveNow = document.getElementById('btnSyncSelectiveNow');
+const cloudServerUrlInput = document.getElementById('cloudServerUrlInput');
+const btnTestCloudConn = document.getElementById('btnTestCloudConn');
+const btnSyncAllToCloud = document.getElementById('btnSyncAllToCloud');
 const toggleCamouflageMode = document.getElementById('toggleCamouflageMode');
 const intruderLogsContainer = document.getElementById('intruderLogsContainer');
 
@@ -1039,18 +1042,6 @@ window.addEventListener('keydown', async (e) => {
 });
 
 // Vault Settings Modal Controls
-const settingsModal = document.getElementById('settingsModal');
-const navSettings = document.getElementById('navSettings');
-const btnCloseSettingsModal = document.getElementById('btnCloseSettingsModal');
-const cloudServerUrlInput = document.getElementById('cloudServerUrlInput');
-const btnTestCloudConn = document.getElementById('btnTestCloudConn');
-const btnSyncAllToCloud = document.getElementById('btnSyncAllToCloud');
-const btnSyncSelectiveNow = document.getElementById('btnSyncSelectiveNow');
-const btnSetupDecoy = document.getElementById('btnSetupDecoy');
-const decoyPassInput = document.getElementById('decoyPassInput');
-const btnExportBackupArchive = document.getElementById('btnExportBackupArchive');
-const btnImportBackupArchive = document.getElementById('btnImportBackupArchive');
-
 if (navSettings) {
   navSettings.addEventListener('click', async () => {
     try {
