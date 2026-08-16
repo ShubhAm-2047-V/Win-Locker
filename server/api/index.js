@@ -255,15 +255,25 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
       const uniqueFileName = `${Date.now()}-${cleanFileName}`;
 
       if (mode === 'vercel-blob') {
+        let blob;
         const putOptions = {
-          access: 'public',
           contentType: file.mimetype || 'application/octet-stream'
         };
-        if (process.env.BLOB_READ_WRITE_TOKEN) {
-          putOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
+        if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+          putOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
         }
 
-        const blob = await vercelBlob.put(uniqueFileName, file.buffer, putOptions);
+        try {
+          // Try public store access
+          blob = await vercelBlob.put(uniqueFileName, file.buffer, { ...putOptions, access: 'public' });
+        } catch (putErr) {
+          if (putErr.message && putErr.message.includes('access')) {
+            // Fallback for private stores
+            blob = await vercelBlob.put(uniqueFileName, file.buffer, { ...putOptions, access: 'private' });
+          } else {
+            throw putErr;
+          }
+        }
 
         uploadedResults.push({
           name: uniqueFileName,
