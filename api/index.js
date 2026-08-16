@@ -151,9 +151,26 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     storageMode: mode,
     isVercelBlobConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
+    tokenPrefix: process.env.BLOB_READ_WRITE_TOKEN ? process.env.BLOB_READ_WRITE_TOKEN.substring(0, 10) + '...' : 'none',
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor(process.uptime())
   });
+});
+
+app.get('/api/debug-blob', async (req, res) => {
+  if (!vercelBlob) {
+    return res.json({ success: false, error: '@vercel/blob module not loaded' });
+  }
+  try {
+    const listOptions = {};
+    if (process.env.BLOB_READ_WRITE_TOKEN && process.env.BLOB_READ_WRITE_TOKEN.trim() !== '') {
+      listOptions.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+    }
+    const listRes = await vercelBlob.list(listOptions);
+    return res.json({ success: true, blobCount: (listRes.blobs || []).length, blobs: listRes.blobs });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message, stack: err.stack });
+  }
 });
 
 // 2. Storage Statistics & Quota
@@ -280,11 +297,18 @@ app.post('/api/storage/upload', upload.array('files', 10), async (req, res) => {
             size: file.size,
             sizeFormatted: formatBytes(file.size),
             contentType: blob.contentType,
-            uploadedAt: new Date().toISOString()
+            uploadedAt: new Date().toISOString(),
+            source: 'vercel-blob'
           });
           uploadedToBlob = true;
         } catch (putErr) {
-          console.warn('Vercel Blob upload failed, using serverless fallback:', putErr.message);
+          console.error('Vercel Blob upload failed:', putErr);
+          if (isServerless && !process.env.BLOB_READ_WRITE_TOKEN) {
+            return res.status(500).json({
+              success: false,
+              error: `Vercel Blob upload failed: ${putErr.message}. Make sure BLOB_READ_WRITE_TOKEN is set in Vercel project environment variables.`
+            });
+          }
         }
       }
 
