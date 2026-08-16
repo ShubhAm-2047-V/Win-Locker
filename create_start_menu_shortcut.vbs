@@ -2,13 +2,14 @@ Set WshShell = CreateObject("WScript.Shell")
 strStartMenu = WshShell.SpecialFolders("Programs")
 strProjectDir = CreateObject("Scripting.FileSystemObject").GetAbsolutePathName(".")
 
-' Create Start Menu Shortcut pointing directly to Electron executable
-Set objShortcut = WshShell.CreateShortcut(strStartMenu & "\WinLocker.lnk")
-objShortcut.TargetPath = strProjectDir & "\node_modules\electron\dist\electron.exe"
-objShortcut.Arguments = """" & strProjectDir & """"
+' Create Start Menu Shortcut pointing to Magic Cal
+Set objShortcut = WshShell.CreateShortcut(strStartMenu & "\Magic Cal.lnk")
+objShortcut.TargetPath = "wscript.exe"
+objShortcut.Arguments = """" & strProjectDir & "\WinLocker.vbs"""
 objShortcut.WorkingDirectory = strProjectDir
-objShortcut.Description = "WinLocker - Stealth Vault Application"
+objShortcut.Description = "Magic Cal - Stealth Vault Application"
+objShortcut.IconLocation = strProjectDir & "\src\assets\icon.ico, 0"
 objShortcut.WindowStyle = 1
 objShortcut.Save
 
-WScript.Echo "Start Menu Shortcut Updated: " & strStartMenu & "\WinLocker.lnk"
+WScript.Echo "Start Menu Shortcut Updated: " & strStartMenu & "\Magic Cal.lnk"

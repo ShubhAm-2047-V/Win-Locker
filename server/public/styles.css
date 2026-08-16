@@ -202,6 +202,13 @@ body::after {
   fill: #0284c7;
 }
 
+.auth-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 18px;
+}
+
 .auth-title {
   font-size: 24px;
   font-weight: 800;
@@ -550,6 +557,13 @@ body::after {
   width: 22px;
   height: 22px;
   fill: currentColor;
+}
+
+.brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .brand-info {

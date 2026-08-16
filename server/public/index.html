@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Magic Cal - Stealth Cloud Vault</title>
   <meta name="description" content="Stealth Cloud Vault & Secure Storage with 3D Liquid Crystal Glassmorphism and Calculator Camouflage.">
+  <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -61,7 +62,7 @@
     <!-- 1. Initial Setup Card -->
     <div id="setupCard" class="auth-box" style="display: none;">
       <div class="auth-logo">
-        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        <img src="assets/logo.png" alt="Magic Cal" style="width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.12));">
       </div>
       <h2 class="auth-title">Welcome to Magic Cal</h2>
       <p class="auth-subtitle">Create a Master Password to protect and encrypt your private Cloud Vault.</p>
@@ -82,7 +83,7 @@
           <div class="input-wrapper">
             <input type="password" id="setupConfirmPasswordInput" class="input-field" placeholder="Confirm password" required autocomplete="new-password">
             <button type="button" class="btn-toggle-eye" onclick="togglePassView('setupConfirmPasswordInput', this)" title="Show/Hide Password">
-              <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11-7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             </button>
           </div>
         </div>
@@ -95,8 +96,8 @@
 
     <!-- 2. Recovery Key Display Card -->
     <div id="recoveryKeyCard" class="auth-box" style="display: none;">
-      <div class="auth-logo" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.35));">
-        <svg viewBox="0 0 24 24" style="fill: #059669;"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+      <div class="auth-logo">
+        <img src="assets/logo.png" alt="Magic Cal" style="width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.12));">
       </div>
       <h2 class="auth-title">Save Your Recovery Key!</h2>
       <p class="auth-subtitle">If you forget your master password, this key is the <b>ONLY</b> way to restore access to your private vault files.</p>
@@ -113,7 +114,7 @@
     <!-- 3. Login Lock Card -->
     <div id="loginCard" class="auth-box" style="display: none;">
       <div class="auth-logo">
-        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        <img src="assets/logo.png" alt="Magic Cal" style="width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.12));">
       </div>
       <h2 class="auth-title">Vault Locked</h2>
       <p class="auth-subtitle">Enter your Master Password (or Panic Password) to unlock your cloud vault.</p>
@@ -122,49 +123,48 @@
         <div class="form-group">
           <div class="input-wrapper">
             <svg class="input-icon-left" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-            <input type="password" id="loginPasswordInput" class="input-field with-icon" placeholder="Master Password or Panic Password" required autocomplete="current-password" autofocus>
+            <input type="password" id="loginPasswordInput" class="input-field" placeholder="Master Password or Panic Password" required autocomplete="current-password" autofocus>
             <button type="button" class="btn-toggle-eye" onclick="togglePassView('loginPasswordInput', this)" title="Show/Hide Password">
               <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             </button>
           </div>
         </div>
 
-        <button type="submit" id="btnUnlockVault" class="btn-primary" style="width: 100%; margin-bottom: 16px;">
+        <button type="submit" id="btnUnlockVault" class="btn-primary" style="width: 100%; margin-bottom: 14px;">
           <span>Unlock Vault</span>
         </button>
-
-        <div class="auth-links-row">
-          <span id="linkForgotPass" class="auth-footer-link">Forgot Password?</span>
-          <span id="btnSwitchToCalc" class="auth-footer-link">Calculator Camouflage</span>
-        </div>
       </form>
+
+      <div class="auth-links-row">
+        <button type="button" id="linkForgotPass" class="auth-link-text">Forgot Password?</button>
+        <button type="button" id="btnSwitchToCalc" class="auth-link-text dim">Calculator Camouflage</button>
+      </div>
     </div>
 
-    <!-- 4. Reset Password Card -->
+    <!-- 4. Password Reset Card -->
     <div id="resetCard" class="auth-box" style="display: none;">
-      <div class="auth-logo" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(249, 115, 22, 0.2));">
-        <svg viewBox="0 0 24 24" style="fill: #dc2626;"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
-      </div>
       <h2 class="auth-title">Reset Master Password</h2>
-      <p class="auth-subtitle">Enter your 24-character Recovery Key to create a new Master Password.</p>
+      <p class="auth-subtitle">Enter your 24-character Recovery Key and specify a new Master Password.</p>
 
       <form id="resetForm" onsubmit="return false;">
         <div class="form-group">
           <label class="form-label">Recovery Key</label>
-          <input type="text" id="resetRecoveryKeyInput" class="input-field" placeholder="WINK-XXXX-XXXX-XXXX" required uppercase>
+          <input type="text" id="resetRecoveryKeyInput" class="input-field" placeholder="WINK-XXXX-XXXX-XXXX" required>
         </div>
 
         <div class="form-group">
           <label class="form-label">New Master Password</label>
           <div class="input-wrapper">
-            <input type="password" id="resetNewPasswordInput" class="input-field" placeholder="New strong password (min 4 chars)" required>
-            <button type="button" class="btn-toggle-eye" onclick="togglePassView('resetNewPasswordInput', this)">
+            <input type="password" id="resetNewPasswordInput" class="input-field" placeholder="New strong password (min 4 chars)" required autocomplete="new-password">
+            <button type="button" class="btn-toggle-eye" onclick="togglePassView('resetNewPasswordInput', this)" title="Show/Hide Password">
               <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             </button>
           </div>
         </div>
 
-        <button type="submit" id="btnSubmitReset" class="btn-primary" style="width: 100%; margin-bottom: 12px;">Reset & Unlock</button>
+        <button type="submit" id="btnSubmitReset" class="btn-primary" style="width: 100%; margin-bottom: 12px;">
+          <span>Reset & Unlock</span>
+        </button>
         <button type="button" id="btnBackToLogin" class="btn-secondary" style="width: 100%;">Back to Login</button>
       </form>
     </div>
@@ -174,13 +174,13 @@
   <!-- ============================================================ -->
   <!-- MAIN APPLICATION VAULT INTERFACE                             -->
   <!-- ============================================================ -->
-  <div id="appScreen" class="app-container" style="display: none;">
+  <div id="appScreen" class="app-layout" style="display: none;">
 
-    <!-- SIDEBAR -->
+    <!-- Left Sidebar -->
     <aside id="sidebar" class="sidebar">
       <div class="app-brand" id="brandBtn" title="Magic Cal Stealth Vault">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        <div class="brand-icon" style="padding:4px; overflow:hidden;">
+          <img src="assets/logo.png" alt="Magic Cal" style="width:100%; height:100%; object-fit:contain;">
         </div>
         <div class="brand-info">
           <div class="brand-title">Magic Cal</div>

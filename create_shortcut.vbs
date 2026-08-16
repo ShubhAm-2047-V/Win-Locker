@@ -15,6 +15,7 @@ For Each name In names
     sc1.Arguments = """" & strProjectDir & "\WinLocker.vbs"""
     sc1.WorkingDirectory = strProjectDir
     sc1.Description = "Magic Cal - Stealth Vault Application"
+    sc1.IconLocation = strProjectDir & "\src\assets\icon.ico, 0"
     sc1.WindowStyle = 1
     sc1.Save
 
@@ -24,6 +25,7 @@ For Each name In names
     sc2.Arguments = """" & strProjectDir & "\WinLocker.vbs"""
     sc2.WorkingDirectory = strProjectDir
     sc2.Description = "Magic Cal - Stealth Vault Application"
+    sc2.IconLocation = strProjectDir & "\src\assets\icon.ico, 0"
     sc2.WindowStyle = 1
     sc2.Save
 Next

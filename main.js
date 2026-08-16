@@ -41,7 +41,8 @@ function createWindow() {
     height: 840,
     minWidth: 920,
     minHeight: 620,
-    title: 'WinLocker - Stealth Vault',
+    title: 'Magic Cal - Stealth Vault',
+    icon: path.join(__dirname, 'src', 'assets', 'logo.png'),
     backgroundColor: '#0f172a',
     show: false,
     webPreferences: {
