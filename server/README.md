@@ -22,7 +22,7 @@ A fast, lightweight Node.js Serverless storage manager and REST API built for **
 
 1. Open PowerShell / Terminal in the `server` directory:
    ```bash
-   cd d:\Win_locker\server
+   cd server
    ```
 2. Install dependencies:
    ```bash

@@ -1,0 +1,30 @@
+Windows Registry Editor Version 5.00
+
+; Register .lock Extension Association (Current User)
+[HKEY_CURRENT_USER\Software\Classes\.lock]
+@="WinLocker.LockFile"
+
+[HKEY_CURRENT_USER\Software\Classes\WinLocker.LockFile]
+@="WinLocker Encrypted File"
+
+[HKEY_CURRENT_USER\Software\Classes\WinLocker.LockFile\DefaultIcon]
+@="E:\\Win_locker\\src\\assets\\icon.ico,0"
+
+[HKEY_CURRENT_USER\Software\Classes\WinLocker.LockFile\shell\open\command]
+@="\"wscript.exe\" \"E:\\Win_locker\\WinLocker.vbs\" \"%1\""
+
+; Register Right-Click Context Menu ("Lock with WinLocker") on Files
+[HKEY_CURRENT_USER\Software\Classes\*\shell\WinLocker]
+@="Lock with WinLocker"
+"Icon"="E:\\Win_locker\\src\\assets\\icon.ico"
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\WinLocker\command]
+@="\"wscript.exe\" \"E:\\Win_locker\\WinLocker.vbs\" \"%1\""
+
+; Register Right-Click Context Menu on Folders
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\WinLocker]
+@="Lock with WinLocker"
+"Icon"="E:\\Win_locker\\src\\assets\\icon.ico"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\WinLocker\command]
+@="\"wscript.exe\" \"E:\\Win_locker\\WinLocker.vbs\" \"%1\""
