@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 
 const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE, 'AppData', 'Local');
 const APPDATA = process.env.APPDATA || path.join(process.env.USERPROFILE, 'AppData', 'Roaming');
@@ -15,21 +15,18 @@ console.log('   WinLocker - Standalone Windows Installation      ');
 console.log('====================================================');
 console.log(`Installing to: ${INSTALL_DIR}\n`);
 
-// 1. Ensure target directory exists
-if (fs.existsSync(INSTALL_DIR)) {
-  console.log('Existing installation found. Cleaning up...');
-  try {
-    fs.rmSync(INSTALL_DIR, { recursive: true, force: true });
-  } catch (e) {
-    console.log('Note: Some files might be locked. Overwriting...');
-  }
-}
-fs.mkdirSync(INSTALL_DIR, { recursive: true });
-fs.mkdirSync(APP_DIR, { recursive: true });
+// 0. Close running WinLocker instances to prevent file lock errors
+try {
+  execSync('taskkill /F /IM WinLocker.exe', { stdio: 'ignore' });
+} catch (_) {}
 
-// 2. Copy Electron runtime binaries
-console.log('1. Copying Electron runtime binaries...');
-const electronDist = path.join(SRC_PROJECT, 'node_modules', 'electron', 'dist');
+// 1. Ensure target directories exist
+if (!fs.existsSync(INSTALL_DIR)) {
+  fs.mkdirSync(INSTALL_DIR, { recursive: true });
+}
+if (!fs.existsSync(APP_DIR)) {
+  fs.mkdirSync(APP_DIR, { recursive: true });
+}
 
 function copyFolderRecursiveSync(source, target) {
   if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
@@ -45,7 +42,15 @@ function copyFolderRecursiveSync(source, target) {
   }
 }
 
-// Copy dist files
+// 2. Copy Electron runtime binaries
+console.log('1. Copying Electron runtime binaries...');
+const electronDist = path.join(SRC_PROJECT, 'node_modules', 'electron', 'dist');
+
+if (!fs.existsSync(electronDist)) {
+  console.error('Error: Electron binaries not found! Please run npm install first.');
+  process.exit(1);
+}
+
 const distFiles = fs.readdirSync(electronDist);
 for (const file of distFiles) {
   const curSource = path.join(electronDist, file);
@@ -53,11 +58,7 @@ for (const file of distFiles) {
     fs.copyFileSync(curSource, path.join(INSTALL_DIR, 'WinLocker.exe'));
     console.log('   - Created WinLocker.exe');
   } else if (file.toLowerCase() === 'resources') {
-    // skip default electron resources, we will build app resources
-    const electronDefaultRes = path.join(curSource, 'default_app.asar');
-    if (fs.existsSync(electronDefaultRes)) {
-      // ignore
-    }
+    // skip default electron resources, we use our own app folder
   } else {
     const curTarget = path.join(INSTALL_DIR, file);
     if (fs.lstatSync(curSource).isDirectory()) {
@@ -84,24 +85,30 @@ for (const item of copyItems) {
   }
 }
 
-// Copy runtime dependencies from node_modules into resources/app/node_modules
-console.log('3. Copying runtime dependencies...');
+// 4. Copy node_modules (excluding electron build tools)
+console.log('3. Copying runtime libraries...');
+const srcNodeModules = path.join(SRC_PROJECT, 'node_modules');
 const destNodeModules = path.join(APP_DIR, 'node_modules');
-fs.mkdirSync(destNodeModules, { recursive: true });
+if (!fs.existsSync(destNodeModules)) fs.mkdirSync(destNodeModules, { recursive: true });
 
-const pkgJson = JSON.parse(fs.readFileSync(path.join(SRC_PROJECT, 'package.json'), 'utf8'));
-const runtimeDeps = Object.keys(pkgJson.dependencies || {});
-
-for (const dep of runtimeDeps) {
-  const depSrc = path.join(SRC_PROJECT, 'node_modules', dep);
-  const depDest = path.join(destNodeModules, dep);
-  if (fs.existsSync(depSrc)) {
-    copyFolderRecursiveSync(depSrc, depDest);
-    console.log(`   - Dependency: ${dep}`);
+if (fs.existsSync(srcNodeModules)) {
+  const modules = fs.readdirSync(srcNodeModules);
+  for (const mod of modules) {
+    if (mod === '.bin' || mod === 'electron' || mod === 'electron-packager') continue;
+    const modSrc = path.join(srcNodeModules, mod);
+    const modDest = path.join(destNodeModules, mod);
+    if (fs.existsSync(modSrc)) {
+      if (fs.lstatSync(modSrc).isDirectory()) {
+        copyFolderRecursiveSync(modSrc, modDest);
+      } else {
+        fs.copyFileSync(modSrc, modDest);
+      }
+    }
   }
+  console.log('   - Copied runtime dependencies');
 }
 
-// 4. Create Desktop and Start Menu Shortcuts
+// 5. Create Desktop and Start Menu Shortcuts
 console.log('4. Creating Windows Shortcuts...');
 const exePath = path.join(INSTALL_DIR, 'WinLocker.exe');
 const iconPath = path.join(APP_DIR, 'src', 'assets', 'icon.ico');
@@ -135,7 +142,7 @@ try { fs.unlinkSync(tempVbs); } catch (_) {}
 console.log('   - Desktop Shortcut created');
 console.log('   - Start Menu Shortcut created');
 
-// 5. Register Context Menu and .lock File Associations in HKCU
+// 6. Register Context Menu and .lock File Associations in HKCU
 console.log('5. Registering Windows Context Menu & File Associations...');
 
 const regCommands = [
@@ -170,5 +177,13 @@ console.log('\n====================================================');
 console.log('   INSTALLATION COMPLETE! 🎉                        ');
 console.log('====================================================');
 console.log(`The app is installed standalone at:\n${INSTALL_DIR}`);
-console.log('\nYou can now safely delete the source repository folder (E:\\Win_locker).');
-console.log('The app, context menu, desktop shortcut, and all your vault data in %APPDATA% will continue to work flawlessly!');
+console.log('\nYou can now delete this downloaded zip/folder if you want.');
+console.log('The app and all your encrypted data will work permanently from your PC.\n');
+
+// 7. Launch the installed app
+try {
+  spawn(exePath, [], { detached: true, stdio: 'ignore' }).unref();
+  console.log('Launching WinLocker...');
+} catch (err) {
+  console.log('You can open WinLocker from your Desktop shortcut.');
+}
