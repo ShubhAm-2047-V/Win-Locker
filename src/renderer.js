@@ -552,10 +552,9 @@ function getCategoryIcon(category) {
 
 async function updateVaultStats() {
   const stats = await ipcRenderer.invoke('vault:getStats');
-  storageSizeText.textContent = formatBytes(stats.totalSize);
-  const maxVisual = 10 * 1024 * 1024 * 1024;
-  const pct = Math.min(100, (stats.totalSize / maxVisual) * 100);
-  storageBarFill.style.width = Math.max(5, pct) + '%';
+  storageSizeText.textContent = `${formatBytes(stats.totalSize || 0)} / ∞`;
+  storageBarFill.style.width = '100%';
+  storageBarFill.style.background = 'linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)';
 }
 
 document.querySelectorAll('.nav-item[data-category]').forEach(tab => {
